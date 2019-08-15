@@ -1,0 +1,305 @@
+
+Ansible one-line commands:
+==========================
+
+[tomcat-server]
+172.31.82.206
+
+[web-server]
+172.32..34.54
+
+[ execute Ping to "target_servers" group]
+# ansible tomcat-server -m ping  						
+
+[ "k" option will ask password for same user]
+# ansible target_servers -k -m command -a "uptime"  
+
+[--ask-become-pass =--> will ask password to become root ]
+# ansible target_servers -k -m command -a "cat /etc/shadow" -b --ask-become-pass  
+
+# ansible target_servers -m command -a "ls -l /home/cent"
+
+[To run reboot for all your company servers in a group, 'abc', in 12 parallel forks]
+# Ansible target-servers -a "/sbin/reboot" -f 12
+
+[Transferring file to many servers/machines]
+#Ansible hosts -m copy -a "src=/etc/yum.conf dest=/tmp/yum.conf"
+
+[Creating new directory]
+# ansible tomct-server -m file -a "dest=/tmp/new-dir mode=775 owner=ansadmin group=ansadmin state=directory"
+
+[Deleting whole directory and files ]
+# Ansible tomct-server -m file -a "dest=/tmp/new-dir state=absent"
+
+[checks if yum package is installed or not, but does not update it.]
+#Ansible hosts -m yum -a "name=httpd state=present"
+ansible tomct-server -m yum -a "name=httpd state=absent" -s     (-s is sudo )
+  
+[check the package is not installed]
+# Ansible hosts -m yum -a "name=demo-tomcat-1 state=absent"
+
+[ checks the latest version of package is installed.]
+# Ansible hosts -m yum -a "name=demo-tomcat-1 state=latest"
+
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+Playbooks:
+========== 
+
+Playbook-1:
+
+[1] create a Playbook which a file exists with the same permission.
+
+[cent@dlp ~]$ vi playbook_sample.yml
+# target hostname or group name
+- hosts: target_servers
+# define tasks
+  tasks:
+# task name (any name you like)
+  - name: Test Task
+# use file module to set the file state
+    file: path=/home/cent/test.conf state=touch owner=cent group=cent mode=0600
+# run Playbook
+
+execute:
+--------
+[cent@dlp ~]$ ansible-playbook playbook_sample.yml 
+PLAY [target_servers] *********************************************************
+
+GATHERING FACTS ***************************************************************
+ok: [10.0.0.52]
+ok: [10.0.0.51]
+
+TASK: [Test Task] *************************************************************
+changed: [10.0.0.51]
+changed: [10.0.0.52]
+
+PLAY RECAP ********************************************************************
+10.0.0.51                  : ok=2    changed=1    unreachable=0    failed=0
+10.0.0.52                  : ok=2    changed=1    unreachable=0    failed=0
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+Playbook-2:
+===========
+ create a Playbook which Apache httpd is installed and running.
+
+---
+- name: working with httpd setup
+  hosts: all
+  become: yes
+  become_method: sudo
+  tasks:
+  - name: Installing httpd service
+    yum: name=httpd state=present
+  - name: httpd is running and enable
+    service: name=httpd state=started enabled=yes
+
+
+==============================================
+
+[cent@dlp ~]$ vi playbook_sample.yml
+---
+- hosts: target_servers
+# use priviledge (default : root)
+  become: yes
+# the way to use priviledge
+  become_method: sudo
+  tasks:
+  - name: httpd is installed
+    yum: name=httpd state=installed
+  - name: httpd is running and enabled
+    service: name=httpd state=started enabled=yes
+# run Playbook
+
+execute:
+=========
+[cent@dlp ~]$ ansible-playbook playbook_sample.yml   
+[cent@dlp ~]$ ansible target_servers -m shell -a "/bin/systemctl status httpd | head -3" -b --ask-become-pass 
+
+Modules:- (file, command, copy, yum, shell, script )
+variables:- vars , vars_files
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+Playbook-3: 
+===========
+copy file 
+-[root@master ansible]# cat cp.yml
+---
+- name: working with copy module
+  hosts: all
+  tasks:
+    - name: copying hosts file to all machines
+      copy: src=/etc/hosts dest=/etc/hosts owner=ec2-user group=root mode=740
+
+
+to execute script on remote servers
+
+[root@master ansible]# cat script.yml
+---
+- name: working with scripts
+hosts: slave1
+tasks:
+- name: executing loop.py
+script: ./loop.py
+
+[root@master ansible]# python loop.py ansible-playbook script.yml
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+Playbook-4:
+===========
+   variables in Ansible Playbook.
+
+[cent@dlp ~]$ vi playbook_sample.yml
+
+ - hosts: target_servers
+  become: yes
+  become_method: sudo
+  tasks:
+  - name: General packages are installed
+    yum: name={{ item }} state=installed
+    with_items:
+      - vim-enhanced
+      - wget
+      - unzip
+    tags: General_Packages
+
+[cent@dlp ~]$ ansible-playbook playbook_sample.yml --ask-become-pass 
+SUDO password:
+
+PLAY [target_servers] *********************************************************
+
+GATHERING FACTS ***************************************************************
+ok: [10.0.0.52]
+ok: [10.0.0.51]
+
+TASK: [General packages are installed] ****************************************
+changed: [10.0.0.52] => (item=vim-enhanced,wget,unzip)
+changed: [10.0.0.51] => (item=vim-enhanced,wget,unzip)
+
+PLAY RECAP ********************************************************************
+10.0.0.51                  : ok=2    changed=1    unreachable=0    failed=0
+10.0.0.52                  : ok=2    changed=1    unreachable=0    failed=0
+
+# confirm settings
+[cent@dlp ~]$ ansible target_servers -m shell -a "rpm -qa | grep -E 'vim-enhanced|wget|unzip'" --ask-become-pass 
+SUDO password:
+10.0.0.51 | success | rc=0 >>
+vim-enhanced-7.4.160-1.el7.x86_64
+wget-1.14-10.el7_0.1.x86_64
+unzip-6.0-15.el7.x86_64
+
+10.0.0.52 | success | rc=0 >>
+vim-enhanced-7.4.160-1.el7.x86_64
+wget-1.14-10.el7_0.1.x86_64
+unzip-6.0-15.el7.x86_64
+[2] When running Playbook, "GATHERING FACTS" task is always executed, it is the function which Ansible gets informations of target hosts and set them in variables. You can refer and use them in Playbooks. If you'd like to confirm which kinds of variables set, it's possible to output with "setup" module like follows.
+# display the contents of "GATHERING FACTS" with "setup" module
+[cent@dlp ~]$ ansible 10.0.0.51 -m setup 
+10.0.0.51 | success >> {
+    "ansible_facts": {
+        "ansible_all_ipv4_addresses": [
+            "10.0.0.51"
+        ],
+        "ansible_all_ipv6_addresses": [
+            "fe80::216:36ff:fe29:7f1c"
+        ],
+        "ansible_architecture": "x86_64",
+        "ansible_bios_date": "01/01/2007",
+        "ansible_bios_version": "0.5.1",
+.....
+.....
+
+# the example of using variables from "GATHERING FACTS"
+
+[cent@dlp ~]$ vi playbook_sample.yml
+
+# refer to "ansible_distribution", "ansible_distribution_version"
+- hosts: target_servers
+  tasks:
+  - name: Refer to Gathering Facts
+    command: echo "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+    register: dist
+  - debug: msg="{{ dist.stdout }}"
+
+
+Execution
+=========
+[cent@dlp ~]$ ansible-playbook playbook_sample.yml 
+
+PLAY [target_servers] *********************************************************
+
+GATHERING FACTS ***************************************************************
+ok: [10.0.0.51]
+ok: [10.0.0.52]
+
+TASK: [Refer to Gathering Facts] **********************************************
+changed: [10.0.0.51]
+changed: [10.0.0.52]
+
+TASK: [debug msg="{{ dist.stdout }}"] *****************************************
+ok: [10.0.0.51] => {
+    "msg": "CentOS 7.1.1503"
+}
+ok: [10.0.0.52] => {
+    "msg": "CentOS 7.1.1503"
+}
+
+PLAY RECAP ********************************************************************
+10.0.0.51                  : ok=3    changed=1    unreachable=0    failed=0
+10.0.0.52                  : ok=3    changed=1    unreachable=0    failed=0
+=====================================================================
+
+To run a command as the tomcat user:
+
+- name: Run a command as the tomcat user
+  command: uptime
+  become: true
+  become_user: tomcat
+===========================================================================================
+
+The following playbook downloads the appropriate packages, turns on the nginx and MySQL services, and creates a basic database and user:
+
+---
+- hosts: nginx
+  remote_user: cleartrip
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: "Install NGINX and MySQL"
+      apt: name={{ item }} state=present
+      with_items:
+        - nginx
+        - mysql-server
+        - python-mysqldb
+
+    - name: "Start and enable the NGINX and MySQL services"
+      service: name={{ item }} state=started enabled=yes
+      with_items:
+        - nginx
+        - mysql
+
+    - name: "Create a test database"
+      mysql_db: name=testDb
+                state=present
+
+    - name: "Create a new user for connections"
+      mysql_user: name=webapp
+                  password=password
+                  priv=*.*:ALL state=present
+=======================================================================
+	
+
+
+==============================
+Note:
+---
+For the case which you connect to clients with a non-priviledged user but they can use priviledge by sudo.
+If you'd like to use another user's priviledge except root, specify the option "--become-user=xxx".
+If you'd like to use another way to use priviledge except sudo (su | pbrun | pfexec | runas), specify the option "--become-method=xxx".

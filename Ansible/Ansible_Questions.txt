@@ -1,0 +1,291 @@
+Ansible Questions !!
+===================================================
+===================================================
+
+1) Have you worked on ansible/chef? -Yes
+
+========================================================================
+
+2) Why we use ansible?
+-Ansible is an open source automation platform. 
+ Ansible can help you with configuration management,   application deployment, task automation. It can also do IT orchestration, where you have to run tasks in sequence and create a chain of events which must happen on several different servers or devices.
+
+========================================================================
+
+3) Did you use ansible? And why you used it? 
+-Yes
+1. Agentless , simple to install & setup, more powerfull and efficient.
+2. Free and Open Source Software (FOSS)
+3. Extensible (In different platforms)
+4. Integrating into Existing DevOps Workflows (For application deployments within IT organizations)
+5. Save more time.
+6. Network-Wide and Ad Hoc Changes
+
+What Exactly Happens in background:
+
+1. Generate a python script 
+2. Copy the script to respective servers
+3. Execute the script on respective servers
+4. Wait for the script to complete execution on all hosts
+
+Its Important To note that:
+
+1. Ansible runs each task in parallel across all hosts
+2. Ansible waits until all hosts have completed a task befor moving to the next node
+3. Ansible runs the tasks in the order that you specify them.
+
+4. To manage a server with ansible, the server needs to have ssh & python 2.5 or later installed or python 2.4 with the python simple json
+library installed
+5. Ansible is an agent less configuration tool which works on ssh port (22)
+6. Pushbased: Unlike chef and puppet ansible is push based . It simply executes the playbook from parent/ansible server to its clients. Where as puppet and ansible are agent based.
+7. Ansible scales down: Which means you can define a single host to "n" number of hosts for configuring.
+
+Chef:
+
+* Idempotent
+
+Idempotent in simple: If its installed then it won't do any thing, if its not installed it will install it. If any changes are made then it will revert back. Hence these
+type of behaviour is called Idempotent.
+
+========================================================================
+
+4) Write a ansible playbook for installing Apache service?
+
+---
+- name: working with httpd setup
+  hosts: all
+  become: yes
+  remote_user: cleartrip
+  become_method: sudo
+  tasks:
+  - name: Installing httpd service
+    yum: name=httpd state=present
+  - name: httpd is running and enable
+    service: name=httpd state=started enabled=yes
+
+
+-[root@master ansible]# cat cp.yml
+---
+- name: working with copy module
+  hosts: all
+  tasks:
+    - name: copying hosts file to all machines
+      copy: src=/etc/hosts dest=/etc/hosts owner=ec2-user group=root mode=740
+
+
+to execute script on remote servers
+
+[root@master ansible]# cat script.yml
+---
+- name: working with scripts
+hosts: slave1
+tasks:
+- name: executing loop.py
+script: ./loop.py
+
+[root@master ansible]# python loop.py ansible-playbook script.yml
+
+
+
+
+=======================================================================
+
+5) Explain about Roles definition?
+In Ansible, the role is the primary mechanism for breaking a playbook into multiple files.
+Ansible - Roles, provide a framework for fully independent collections of variables, tasks, files, templates, and modules
+
+ansible-galaxy init --force --offline nginx
+
+[root@server ~]# tree 
+.
+└── nginx
+    ├── defaults
+    │   └── main.yml
+    ├── files
+    ├── handlers
+    │   └── main.yml
+    ├── meta
+    │   └── main.yml
+    ├── README.md
+    ├── tasks
+    │   └── main.yml
+    ├── templates
+    ├── tests
+    │   ├── inventory
+    │   └── test.yml
+    └── vars
+        └── main.yml
+
+9 directories, 8 files
+
+=======================================================================
+
+6) What all u did in ansible?
+explain about modules below 24 question
+
+=======================================================================
+
+7) Write any of the use case of Ansible program and explain.
+
+* Save's system administrators time
+
+* explain below playbook
+---
+- name: working with httpd setup
+  hosts: all
+  become: yes
+  remote_user: cleartrip
+  become_method: sudo
+  tasks:
+  - name: Installing httpd service
+    yum: name=httpd state=present
+  - name: httpd is running and enable
+    service: name=httpd state=started enabled=yes
+
+=======================================================================
+
+8)Can you write any given ansible program? 
+yes
+
+=======================================================================
+
+9)Write a ansible playbook for installing Apache service? 
+above
+
+=======================================================================
+
+10) In configuration management which tool you are working?
+(Ansible)
+
+=======================================================================
+
+11) What is the difference between Ansible, cheff and puppet?
+
+configuration management” tools, which means they are designed to application deployment, configure and manage servers
+
+Ansible: 1. Ansible runs only on master server machine, but no agents running on the client machine
+         2. It uses ssh connection to login to client systems which password less authentication. 
+         3. Yaml languange
+         4. Breaks key mechanism
+         5. Mainly works on push based mechanism.
+puppet: 1. Puppet server runs on the master machine and Puppet clients runs as an agent on each client 
+           machine
+        2. certificate signing between the agent and the master is required.
+        3. Domain specific language
+chef: 1. Chef server runs on the master machine and Chef client runs as an agent on each client machine
+      2. required configurations which are tested and then pushed to master.
+      3. Ruby language
+
+saltstack:1. Server is called as salt master and clients are called as salt minions which run as 
+            agents in the client machine.
+        2. Server pushes configurations to all the clients.
+        3. Yaml language
+
+    
+======================================================================
+
+12) If I have set of DB   servers and I have a set of Application servers? I do have some have set of web servers? I want to push something in Application servers, how can we push it?
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+
+13) Which playbook you are implemented in your environment?
+Restarting of tomcat-service in all tomcat servers
+Restarting of apache-service in all apache servers
+Restarting of resque-workers machine in all resque-workers
+=======================================================================
+
+14) I want to create some users in the  100 servers, same user present in the 100 servrers?
+
+=======================================================================
+
+15) What are the sections are there in playbook?
+
+=======================================================================
+
+16) What are the setions are there in playbook?
+
+=======================================================================
+
+17) Can you explain ansible and configuring notes to ansible?
+
+=======================================================================
+
+18) Differentiate between Asset Management and Configuration Management
+Ans. Asset Management, broadly defined, refers to any system that monitors and maintains things of value to an entity or group.
+Configuration Management is the process of planning for, identifying, controlling and verifying the Configurations Items (CIs) within a service, recording their status and, in support of Change Management, assessing the potential IT impact of changing those items.
+
+=======================================================================
+
+19) Q23. What is Puppet?
+Ans. It is a Configuration Management tool which is used to automate administration tasks.
+
+=======================================================================
+
+20) which perpose you are using Ansible?
+configuration management” tools, which means they are designed to application deployment, configure and manage servers. 
+Open source 
+=======================================================================
+
+21) how do you rolback an application throw Ansible?
+No, there is no global functionality for a rollback.
+You have to add a new play that reverses the action of the other one.
+
+=======================================================================
+
+22) i have some task that i have go through an ansible, i have 10 machines some tasks are comman dependent, how can we reuse that tasks?
+=======================================================================
+23) what is inventory?
+1. Ansible keeps track of its nodes using an inventory file.
+2. (ansible.cfg file )Create a configuration file and edit it to include the location where you will store your inventory file:
+
+=======================================================================
+
+24) what on modules you worked ?
+
+command, script, file, copy, yum, shell, service,
+
+script: 
+- name: Run a script with arguments
+  script: /some/local/script.sh --some-argument 1234
+
+command:
+- name: return motd to registered var
+  command: cat /etc/motd
+
+file:
+
+script:
+- name: Execute the command in remote shell; stdout goes to the specified file on the remote.
+  shell: somescript.sh >> somelog.txt
+
+yum:
+- name: install the latest version of Apache
+  yum: name: httpd state: latest
+
+git:
+- git:
+    repo: 'https://foosball.example.org/path/to/repo.git'
+    dest: /usr/local/myjar-folder/
+
+service:
+- name: Start service httpd, if not started
+  service:
+    name: httpd
+    state: started   or restarted or  reloaded
+
+ - name: Restart network service for interface eth0
+   service:
+    name: network
+    state: restarted
+    args: eth0
+ - name: Copy file to all remote servers
+   copy: src=/etc/yum.conf dest=/tmp/yum.conf
+
+=======================================================================
+25) How to review effects b4 executing playbook?
+
+Use --check to review the effects of the playbook before running it:
+ansible-playbook common_server_setup.yml --check --ask-become-pass
+
+=======================================================================

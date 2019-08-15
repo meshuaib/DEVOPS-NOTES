@@ -1,0 +1,115 @@
+						ANSIBLE SETUP
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+Ansible Installation
+
+Ansible is an open source automation platform. It is very, very simple to setup and yet powerful. Ansible can help you with configuration management, application deployment, task automation.
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+
+Follow this in **YouTube(https://www.youtube.com/watch?v=79xFyOc_eEY)
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+
+Prerequisites
+
+An AWS EC2 instance
+Installation steps:
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+# install from EPEL
+[root@dlp ~]# yum --enablerepo=epel -y install ansible openssh-clients
+
+    OR 
+
+Add a EPEL (Extra Packages for Enterprise Linux)third party repository to get packages for Ansible
+
+rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+Install Ansible
+
+yum install ansible -y 
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+Check Ansible version
+
+ansible --version
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+Create a new user for ansible administration & grant admin access to user (Master and Slave)
+
+useradd ansadmin
+passwd ansadmin
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+# below command addes ansadmin to sudoers file. But strongly recommended to use "visudo" command if you are aware vi or nano editor. 
+
+echo "ansadmin ALL=(ALL) ALL" >> /etc/sudoers
+Using keybased authentication is advised. If you are still at learning stage use password based authentication (Master & Slave)
+
+# sed command replaces "PasswordAuthentication no to yes" without editing file 
+ sed -ie 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+Login as  ansadmin user on master and generate ssh key (Master)
+
+ssh-keygen
+Copy keys onto all ansible client nodes (Master)
+
+ssh-copy-id 172.31.23.32(remote server)
+Update target servers information on /etc/ansible/hosts file (Master)
+
+1. Make directory ansible
+2. create ansible.cfg file
+
+	[ansadmin@Ansible-Server ansible]$ cat ansible.cfg 
+	[defaults]
+	inventory= /home/ansadmin/ansible/hosts
+
+3. Create hosts file
+
+Run ansible command as ansadmin user it should be successful (Master)
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+
+ansible all -m ping
+
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
+
+To configure yaml languange autoamtic in .yml file
+
+highlight-ansible-yaml-and-jinja-syntax-in-vim-editor ::
+-----
+
+1.  mkdir -p ~/.vim/autoload ~/.vim/bundle 
+2.  curl -LSso ~/.vim/autoload/pathogen.vim https://tpo.pe/pathogen.vim
+ 
+	Now add the following lines to vim ~/.vimrc to activate this and start autoloading
+	bundles.
+
+3.  [root@slave1 ansible]# vim ~/.vimrc
+	execute pathogen#infect()
+	syntax on
+	filetype plugin indent on
+	autocmd FileType yaml setlocal ts=2 sts=2 sw=2 expandtab
+     :wq 
+ 
+4.  Now, download the bundles.
+
+	yum install git -y
+	cd ~/.vim/bundle
+	git clone git://github.com/chase/vim-ansible-yaml.git
+	git clone https://github.com/lepture/vim-jinja.git
+----
+
+
+You are done !!
+==========@@@@@@@@=============@@@@@@@@@===========@@@@@@@@============
