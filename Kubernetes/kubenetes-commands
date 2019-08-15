@@ -1,0 +1,109 @@
+	kubernetes commands
+===================
+# kubectl get nodes 			(worker nodes connected) 
+# kubectl get nodes -o wide
+# kubectl get cs    			(show cluster health check )
+# kubectl get pods 				(how many pods are available)
+# kubectl get deployments  		[List all deployments ]
+# kubectl get services 			[List the services with pods open ports ]
+# kubectl get services
+# kubectl get pods --all-namespaces=true -o wide
+# kubectl get pod  nginx-698898f666-ttznb -o yaml >nginx.yml  [create small yml file for nginx for depl]
+# kubectl get pods -n default
+# kubectl get pods -n kube-system
+# kubectl get pods -n prod
+
+# kubectl create namespace airdev
+# kubectl get namespaces
+# kubectl get pods --all-namespaces=true -o wide
+# kubectl --namespace=dev run nginx --image=nginx (create nginx under choice namespace)
+# kubectl get pods,deployments,replicasets -n prod
+
+
+----------
+$ kubectl config set-context $(kubectl config current-context) --namespace=air-dev
+Context "kubernetes-admin@kubernetes" modified.
+$ kubectl config get-contexts
+CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE
+*         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin   air-dev
+----------
+
+# kubectl run nginx  --image nginx:alpine --port 80 	 (deploy nginx)
+# kubectl run nginx --image=nginx:alpine --port=80  	 (Create nginx pod)
+# 
+
+# kubectl expose deployment nginx --type=LoadBalancer
+# kubectl expose deployment nginx --type=NodePort   	 [Open to world]
+
+# kubectl get deployments	
+# kubectl delete deployment nginx 				(To delete pod which is deployed)
+
+
+# kubectl config view 					(all configuration views and cluster details)
+# kubectl config view --minify=true     (Active cluster details)
+# kubectl config get-contexts  			(display how many cluster ans who is active)
+# kubectl config use-contexts minikube
+# kubectl config get-clusters  			(To list clusters names )
+# kubectl config get-contexts  			(To list current master )
+
+# kubectl cluster-info 
+
+# kubectl describe node kubeadm         (All description details of node)
+# kubectl describe deployment nginx     (Describe nginx deployment details )
+# kubectl describe pod nginx            (Describe nginx pod details )
+
+# kubectl create token [Using this command create new token and apply on node(token valid 24hr only) ]
+# kubeadm join 10.160.0.5:6443 --token z9clwa.dc1wa94gneju442o     --discovery-token-ca-cert-hash sha256:03765666203a5f6b02be03c8e2d0d3f11925a586fe8f5dc331e4c21dd168b507
+
+
+--kubeconfig=/opt/kube/production   (executing on cluster from other nodes using this file)
+# kubectl --kubeconfig=/opt/kube/production get pods --namespace=air | grep airapi4flexisearch | awk '{print $1}' >docker.txt 
+
+===============================================================================
+Cheatsheet - Commonly used kubectl Commands
+kubectl config get-contexts                              # See all available contexts
+kubectl config view                                      # See current cluster context
+kubectl config set-context $(kubectl config current-context) --namespace=my-namespace
+                                                         # Change default namespace
+
+kubectl help run                                         # See help about run (or other commands)
+kubectl explain pod.spec                                 # Documenation on any resource attribute
+
+kubectl get nodes                                        # See nodes in cluster
+kubectl get pods -o wide                                 # See pods in current namespace
+kubectl get pod <name> -o yaml                           # See info about pod <name> in yaml format
+kubectl describe pod <name>                              # Show information about pod <name>
+kubectl describe service <name>                          # Show information about service <name>
+
+kubectl api-resources                                    # See resources types and abbreviations
+
+kubectl create namespace my-namespace                    # Create namespace
+                                                         # Set default namespace
+kubectl config set-context $(kubectl config current-context) --namespace=<my-namespace>
+
+kubectl run multitool --image=praqma/network-multitool --restart Never   # Create plain pod
+kubectl create deployment nginx --image=nginx:1.7.9      # Create deployment
+
+kubectl set image deployment/nginx nginx=nginx:1.9.1     # Update image in deployment pod template
+kubectl scale deployment nginx --replicas=4              # Scale deployment
+kubectl rollout status deployment/nginx                  # See rollout status
+kubectl rollout undo deployment/nginx                    # Undo a rollout
+
+kubectl exec -it <name> bash                             # Execute bash inside pod <name>
+kubectl exec -it <name> -- my-cmd -with -args            # Execute cmd with arguments inside pod
+
+kubectl delete pod <name>                                # Delete pod with name <name>
+kubectl delete deployment <name>                         # Delete deployment with name <name>
+
+kubectl expose deployment envtest --type=NodePort --port=3000  # Create service, expose deployment
+
+kubectl create configmap language --from-literal=LANGUAGE=Elvish  # Create configmap
+                                                         # Create secret
+kubectl create secret generic apikey --from-literal=API_KEY=oneringtorulethemall
+
+
+Difference commands in Docker and kubernetes: 
+=============================================
+
+docker run -itd --name nginx_server -p 8080:80 nginx:alpine 
+kubectl run ngnix --image=nginx:alpine

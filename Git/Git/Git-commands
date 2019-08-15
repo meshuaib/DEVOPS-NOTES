@@ -1,0 +1,99 @@
+Make password less authentication:
+==================================
+
+git config --global user.name "Syed-Saifulla"
+git config --global user.email "saifullasyed@yahoo.in"
+cat ~/.gitconfig
+
+1. For ssh 
+   > First clone repo from github repository.
+   > git clone git@github.com:Syed-Saifulla/Devops-Notes.git
+   > Now add your ssh-pub key to your github repo account to generate password less authenticaton.
+   > settings -> SSH keys -> add ssh-key -> save it.
+   > verify using this command "ssh -T git@github.com" on same cloned directory.
+   > Directly use git push and git pull commands .
+
+
+
+2. For https
+   > First clone repo from github repository.
+   > git clone https://github.com/Syed-Saifulla/Devops-Notes.git
+   > Use username and password use while pushing to github repo account.
+
+	
+Commands :
+========
+
+1) git init . (Reinitialized existing Git repository in /root/src/.git/)
+2) git branch (shows different branches)
+3) git add file1 (Add file1 to git repository)
+4) git commit -m "my file1 " (Commiting  file1 with my understanding)
+5) git status
+6) git log  or git log --oneline
+7) git clone src/ /tmp/dest  (clone all the git repo to dest folder or same as src to dest)
+8) cat .gitignore 
+   *.py
+9) git checkout -b dvs9 (create new branch)
+10) git checkout master  (to become master)
+11) git log   and then  recover file1
+12) git checkout 265de34f3aff33e5da24af9bec1d4162b8f7eb75 . (get checkout id and give location path .)
+13) git branch -d refs/heads/265de34f3aff33e5da24af9bec1     (To delete branch)
+14) git remote -v
+	myOrigin ssh://git@example.com:1234/myRepo.git (fetch)
+	myOrigin ssh://git@example.com:1234/myRepo.git (push)
+15) git clone https://github.com/Syed-Saifulla/HelloWorld.git hello_New_Dir  (clone helloworld.git into new directory hello_New_Dir)
+16)  should be like this 
+
+   [root@workstation hello]# git remote -v
+origin	https://github.com/Syed-Saifulla/HelloWorld.git (fetch)
+origin	https://github.com/Syed-Saifulla/HelloWorld.git (push)
+
+17) Now create file , Do commit , Push branch and check in github
+==================================================================================================
+
+
+How to copy somebody's github repo to  my local working git repo and  then to  push in my personal github repo ??
+
+git clone https://github.com/shan5a6/apache-configuration-ci/ apache
+git remote add origin https://github.com/Syed-Saifulla/apache-configuration-ci/
+git remote -vv
+git add *
+git commit -m "Apache-configuration-shaan"
+git branch 
+git status
+git log
+git pull origin master
+git push origin master
+
+Now check in you github -You are done !!
+==================================================================================================
+
+Above one is for directly master , Here i will push to different brach with name having "pullrequest" branch name. How ??
+
+git clone https://github.com/shan5a6/apache-configuration-ci/ 
+cd apache-configuration-ci/
+
+git remote add origin https://github.com/Syed-Saifulla/apache-configuration-ci/
+git remote -vv
+git checkout -b pullrequest
+git branch
+git add *
+git commit -m "Apache-configuration-shaan"
+git branch 
+git status
+git log
+git push origin pullrequest
+
+Now go to ( https://github.com/Syed-Saifulla/apache-configuration-ci/ )  select branches then all 
+
+https://github.com/Syed-Saifulla/apache-configuration-ci/branches/all
+
+check in Github browser
+
+==================================================================================================
+
+
+
+
+
+

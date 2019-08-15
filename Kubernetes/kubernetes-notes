@@ -1,0 +1,2148 @@
+Introduction to Kubernetes ::
+
+=============================================================================
+
+What is Kubernetes :
+
+Commonly referred to by its internal designation during the development as Google(k8s).
+
+1.Kubernetes is an open source container cluster management or (orchestration tool)
+2.Kubernetes primary goal is to provide a platform for automating deployment pods,scaling,descaling,services, load balancing and Maintaing operations of software containers across a cluster of workernodes.
+
+
+When it was released in july 2015, Google donated it as "seed technology" to the newly formed Cloud native computing foundation established in a partenership
+with the linux foundation
+
+docker is responisble for managing the lifecycle of Containers and these containers are manually linked
+and orchestrated with kubernetes
+=============================================================================
+
+Design Overview:
+
+kubernetes is built through the definition of a set of components (building blocks or "primitives") which,when used collectively,provide a method for the deployment,
+maintenance and scalability of container based application clusters.
+
+These "primitives" are designed to be loosely coupled(i.e. where little to no knowledge of the other component definitions is needed to use) as well as easily extensible through an API.
+Both the internal components of kubernetes as well as the extensions and containers make use of this API.
+
+Although kubernetes was designed and used internally at google to deploy and utilize "billion of containers", since it was open sourced under the Apache common license, it has since been
+adopted fomally as a service available from each of the major cloud providers.
+
+=============================================================================
+
+Components:
+
+Building Block of Kubernetes:
+
+Node
+Pods
+Labels
+Selectors
+Controllers
+Services
+Control Pane
+API
+
+=============================================================================
+
+Kubernetes Architecture ::
+
+Please check "HighLevel Architecture" figure for more information ...
+
+From the above architecture we can conclude that we will have a "master controller" which will control all the other nodes. Here in k8s we called these nodes as "minion", which means that each and every server (minion) should have docker package installed. Along with this we are going to create our containers in seperate environment which we called it as "Pods". Hence you are not allowed to create as seperate entity. You should create the containers as part of the pods. If you want to increase the containers you can increase the containers as part of that pods. And finally all the minions will be managed by our master controller. 
+
+
+=============================================================================
+
+Minions (Nodes):
+
+1. You can think of these as "container clients". 
+2. These are the individual hosts(physical or virtual) that docker is installed on and hosts the 
+   various  containers within your managed cluster.
+3. Each minion will run ETCD  and kubernetes proxy
+
+4. Each minion will run ETCD (a key pair management and communication service, used by kubernetes for 
+   exaching messages and reporting on cluster status) as well as the kubernetes proxy.
+
+So Finally "Minions" are nothing but our physical or virtula server where we have our container package installed and it acts like a slave to the master controller. 
+
+=============================================================================
+
+PODS:
+
+A pod consists of one or more containers. 
+A pod is a group of containers that are deployed together on the same host machine.
+Pods are assigned unique ips within each cluster. 
+Pods allow an application to use ports with out having to worry about conflicting port utilization.
+Pods can contain definitions of disk volumes or share, and then provide access from those to all the members(containers) with in the pod.
+
+Finally, pod management is done through the API or delegated to a controller.
+
+These containers are guaranteed (by the cluster controller) to be located on the same host machine in order to facilitate sharing of resources.
+
+=============================================================================
+
+labels:
+
+Clients can attach "key-value pairs" to any object in the system (like pods or minions). These become the labels that identify them in the configuration and management of them.
+
+=============================================================================
+
+Selectors:
+
+Label selectors represent queries that are made against those labels. They resolve to the corresponding matching objects.
+
+These two item are the primary way that grouping is done in kubernetes and determine which components that a given operation applies to when indicated. 
+
+=============================================================================
+
+Controllers:
+
+1. It is used in  management of your cluster. Controllers are the mechanism by which your desired configuration state is enforced.
+
+2.Controllers manage a set of pods and depending on the desire configuration state, may enagage other controllers to handle replication and scaling (Replication Controller) of XX number of containers and pods across the clsuter. 
+
+3. It is also responsible for replacing any container in a pod that fails (based on the desired state of the cluster).
+
+Other controllers that can be engaged include a DaemonSet Controller (enforces a 1 to 1 ratio of pods to minions) and job Controller(that runs pods to "completion", such
+as in batch jobs).
+
+Each set of pods any controller manages, is determined by the label selectors that are part of its definition.
+
+=============================================================================
+
+Services:
+
+A pod consists of one or more containers. Those containers are guranteed (by the cluster controller) to be located on the same host machine in order to facilitate sharing of resources.
+
+This is so that pods can work together, like in a multi-tiere application configuration. Each set of pods that define and implement a service (like Mysql or Apache) are defined 
+by the label selector.
+
+Kubernetes can then provide service discovery and handle routing with the static ip for each pod as well as load balancing (round robin based) connections to that service 
+among the pods that match the label selector indicated.
+
+By default although a service is only exposed inside a cluster, it can also be exposed outside a cluster as needed. 
+
+
+=================================================================================
+
+Installation & Configuration ::
+
+On the Master Node following components will be installed ::
+
+API Server  – It provides kubernetes API using Jason / Yaml over http, states of API objects are stored in etcd
+
+Scheduler  – It is a program on master node which performs the scheduling tasks like launching containers in worker nodes based on resource availability
+
+Controller Manager – Main Job of Controller manager is to monitor replication controllers and create pods to maintain desired state.
+
+etcd – It is a Key value pair data base. It stores configuration data of cluster and cluster state.
+
+Kubectl utility – It is a command line utility which connects to API Server on port 6443. It is used by administrators to create pods, services etc.
+
+=============================================================================
+
+On Worker Nodes following components will be installed ::
+
+Kubelet – It is an agent which runs on every worker node, it connects to docker  and takes care of creating, starting, deleting containers.
+
+Kube-Proxy – It routes the traffic to appropriate containers based on ip address and port number of the incoming request. In other words we can say it is used for port translation.
+
+Pod – Pod can be defined as a multi-tier or group of containers that are deployed on a single worker node or docker host.
+
+=============================================================================
+
+Installing and configuration of K8s ::
+
+We are taking 3 machines with 1. master and other two as worker nodes !!
+
+=============================================================================
+
+Installing and configuring ansible-vim  :
+
+
+mkdir -p ~/.vim/autoload ~/.vim/bundle && curl -LSso ~/.vim/autoload/pathogen.vim https://tpo.pe/pathogen.vim
+
+Now add the following lines to vim ~/.vimrc to activate this and start autoloading bundles.
+
+[root@slave1 ansible]# cat ~/.vimrc
+execute pathogen#infect()
+syntax on
+filetype plugin indent on
+autocmd FileType yaml setlocal ts=2 sts=2 sw=2 expandtab
+
+
+Now, download the bundles.
+
+yum install git -y 
+cd ~/.vim/bundle
+git clone git://github.com/chase/vim-ansible-yaml.git
+git clone https://github.com/lepture/vim-jinja.git
+
+
+
+1. Do the changes below on all the nodes
+
+yum update -y
+yum install vim firewalld -y
+systemctl enable firewalld
+systemctl restart firewalld
+exec bash
+setenforce 0
+sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+firewall-cmd --permanent --add-port=6443/tcp
+firewall-cmd --permanent --add-port=2379-2380/tcp
+firewall-cmd --permanent --add-port=10250/tcp
+firewall-cmd --permanent --add-port=10251/tcp
+firewall-cmd --permanent --add-port=10252/tcp
+firewall-cmd --permanent --add-port=10255/tcp
+firewall-cmd --reload
+modprobe br_netfilter
+echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
+
+
+2. Configure the local dns for mutual communication (/etc/hosts)
+
+Master Node Configuration ::
+
+1. Configuring the repository
+
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+        https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+
+
+2. Install kubeadm and docker 
+yum update -y
+yum install kubeadm docker -y
+
+Start and enable kubectl and docker service::
+
+systemctl restart docker && systemctl enable docker
+systemctl  restart kubelet && systemctl enable kubelet
+
+
+3. Initialize Kubernetes Master with ‘kubeadm init’
+
+kubeadm init
+
+kubeadm join --token 117e39.0651dc804a68984d 10.142.0.2:6443 --discovery-token-ca-cert-hash sha256:9a98d03f3462605261021f5aaa1116ef5f96a7ced10773fe1bfb0ac30481d3b1
+
+
+One you are done with above you will get a token id, keep it safe !!!
+
+Once done with the above do the below.
+
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+
+4. Deploy pod network to the cluster
+
+export kubever=$(kubectl version | base64 | tr -d '\n')
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+
+
+Testing ::
+
+kubectl get nodes
+
+kubectl  get pods  --all-namespaces
+
+=============================================================================
+
+Worker or Minion Nodes Configuration ::
+
+Note: Execute the below on all the worker nodes !!! 
+
+
+1. Configuring the repository
+
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+        https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+
+2. Install kubeadm and docker package on both nodes
+
+yum  install kubeadm docker -y
+
+3. Start and enable docker service
+
+systemctl restart docker && systemctl enable docker
+
+
+4. Now Join worker nodes to master node
+
+kubeadm join --token 117e39.0651dc804a68984d 10.142.0.2:6443 --discovery-token-ca-cert-hash sha256:9a98d03f3462605261021f5aaa1116ef5f96a7ced10773fe1bfb0ac30481d3b1
+
+Note: Copy the token you got while configuring the master node !! 
+
+
+Final Testing:
+
+Now verify Nodes status from master node using kubectl command
+
+[root@k8s-master ~]# kubectl get nodes
+NAME          STATUS     ROLES     AGE       VERSION
+k8s-master    Ready      master    7m        v1.9.3
+k8s-minion1   Ready      <none>    32s       v1.9.3
+k8s-minion2   NotReady   <none>    26s       v1.9.3
+
+
+now you are good to go with your work !!!!
+
+=================================================================================
+
+
+Kubectl: Exploring our Environment ::
+
+
+[root@k8s-master ~]# kubectl get nodes
+NAME          STATUS     AGE
+0.0.0.0       NotReady   9m
+k8s-minion1   Ready      1m
+
+
+[root@k8s-master ~]# kubectl describe nodes
+Name:                   0.0.0.0
+Role:
+Labels:                 beta.kubernetes.io/arch=amd64
+                        beta.kubernetes.io/os=lin
+
+=============================================================================
+Pods, Tags and Services ::
+
+
+Create and Deploy Pod Definitions :
+
+Note: Make sure that you are instaling the below package in case of any failures.
+
+yum install python-rhsm-certificates -y
+
+
+Creating Pod:
+
+1. Create directory called "Builds"
+
+2. Now we are going to create a pod for nginx:1.7.9 version with ".yml" syntax like below.
+
+[root@k8s-master Builds]# pwd
+/root/Builds
+[root@k8s-master Builds]# cat nginx.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:																																																	
+  containers:
+   - name: nginx
+     image: nginx:1.7.9
+     ports:
+      - containerPort: 80																																																																																																															
+[root@k8s-master Builds]#
+
+
+3. Now Create the pod 
+
+[root@k8s-master Builds]# kubectl create -f /root/Builds/nginx.yml
+pod "nginx" created
+[root@k8s-master Builds]# kubectl get pods
+NAME      READY     STATUS    RESTARTS   AGE
+nginx     1/1       Running   0          7s
+[root@k8s-master Builds]#
+
+
+now you could see that your pod is been create. 
+
+4. You Can check the pod description using below.
+
+[root@k8s-master Builds]# kubectl describe pods nginx
+Name:           nginx
+Namespace:      default
+Node:           127.0.0.1/127.0.0.1
+Start Time:     Tue, 16 Jan 2018 10:14:50 +0000
+
+
+
+Events:
+  FirstSeen     LastSeen        Count   From                    SubObjectPath   Type            Reason          Message
+  ---------     --------        -----   ----                    -------------   --------        ------          -------
+  11s           11s             1       {default-scheduler }                    Normal          Scheduled       Successfully assigned nginx to k8s-minion1
+
+
+
+5. From the above we could see that our container is been created and allocated to our k8s-minion1 node. Login in to the minion1 and check the container.
+
+[root@minion1 log]# docker ps
+CONTAINER ID        IMAGE                                                        COMMAND                  CREATED              STATUS              PORTS               NAMES
+ef7ebc40526c        nginx                                                        "nginx -g 'daemon off"   54 seconds ago       Up 49 seconds                           k8s_nginx.156efd59_nginx1_default_68a1563a-faa8-11e7-ad05-06f89f94c2e4_097c6b7c
+ea492595703a        registry.access.redhat.com/rhel7/pod-infrastructure:latest   "/usr/bin/pod"           About a minute ago   Up 56 seconds                           k8s_POD.a8590b41_nginx1_default_68a1563a-faa8-11e7-ad05-06f89f94c2e4_06d6f732
+
+
+6. You Can delete a pod using below.
+
+[root@k8s-master Builds]# kubectl get pods
+NAME      READY     STATUS    RESTARTS   AGE
+nginx     1/1       Unknown   0          25m
+nginx1    1/1       Running   0          8m
+
+
+[root@k8s-master Builds]# kubectl delete pod nginx1
+pod "nginx1" deleted
+
+
+Note: If you want to delete your pod forcefully then you can execute the below option.
+
+kubectl delete pods nginx --grace-period=0 --force
+
+** Now lets delete the pods which we created and start checking the port forwarding concept.
+
+[root@k8s-master Builds]# kubectl get pods
+No resources found.
+
+
+[root@k8s-master Builds]# kubectl create -f ./nginx.yml
+pod "nginx1" created
+
+
+[root@k8s-master Builds]# kubectl get pods
+NAME      READY     STATUS    RESTARTS   AGE
+nginx1    1/1       Running   0          1m
+[root@k8s-master Builds]#
+
+=============================================================================
+
+Tags, Labels and Selectors ::
+
+
+This part mainly deals with the naming & labeling the pods what ever we are creating. For example observe the below example.
+
+
+[root@k8s-master Builds]# cat nginx-pod-label.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx1
+  labels:
+    app: nginx1
+
+spec:
+  containers:
+   - name: nginx1
+     image: nginx:1.7.9
+     ports:
+      - containerPort: 80
+
+=============================================================================
+
+[root@k8s-master Builds]# kubectl create -f ./nginx-pod-label.yml
+pod "nginx1" created
+
+
+	  
+We have added a new list element called "label" and here we are using a "key:value" pair. In this case we are specifiying "app:nginx" which means that when you are dealing with 
+the pods you can simply use this naming convention than simply getting data of all the pods.
+
+Like below.
+
+Before:
+
+we used to execute 
+
+#kubectl describe nodes :-> This will displays all the details of all the nodes.
+
+But now you can use the commands like below.
+
+[root@k8s-master Builds]# kubectl get pods -l app=nginx1
+NAME      READY     STATUS    RESTARTS   AGE
+nginx     1/1       Running   0          58s
+
+
+[root@k8s-master Builds]# kubectl describe pods -l app=nginx1
+Name:           nginx2
+Namespace:      default
+Node:           k8s-minion1/10.142.0.3
+Start Time:     Wed, 17 Jan 2018 12:16:28 +0000
+
+
+So using "-l" option you can specify your key value pair in our case "app=nginx1"
+
+=============================================================================
+Deployment State ::
+
+In this we are going to start deploying our nginx service lets modify our "yml" file like below.
+
+
+[root@k8s-master Builds]# cat nginx-development-pod-label.yml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-deployement-prod
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx-deployement-prpd
+    spec:
+      containers:
+      - name: nginx-deployement-prod
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+
+		
+Lets create out deployement
+
+[root@k8s-master Builds]# kubectl create -f nginx-development-pod-label.yml
+deployment "nginx-deployement-prod" created
+
+
+Now if you observe above we have created out deployement.
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                                      READY     STATUS    RESTARTS   AGE
+nginx                                     1/1       Running   1          18h
+nginx-deployement-prod-1557711524-1jgkj   1/1       Running   0          5s
+nginx2                                    1/1       Running   1          18h
+
+
+From the above we can check that "1557711524-1jgkj" is been added to the pod what exactly it means is that its adding the identity of **** (figure it out)
+
+[root@k8s-master Builds]# kubectl get deployments
+NAME                     DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployement-prod   1         1         1            1           53s
+
+
+Above will help you to get the deployments !!
+
+Lets do a bit complicated things !!
+
+Now lets create a new deployment like below.
+
+[root@k8s-master Builds]# cat nginx-development-dev-label.yml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-deployement-dev
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx-deployement-dev
+    spec:
+      containers:
+      - name: nginx-deployement-dev
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+
+
+		
+[root@k8s-master Builds]# kubectl create -f nginx-development-dev-label.yml
+deployment "nginx-deployement-dev" created
+
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                                      READY     STATUS    RESTARTS   AGE
+nginx                                     1/1       Running   1          19h
+nginx-deployement-dev-2804140471-cldj6    1/1       Running   0          5s
+nginx-deployement-prod-1557711524-1jgkj   1/1       Running   0          15m
+nginx2                                    1/1       Running   1          18h
+
+
+[root@k8s-master Builds]# kubectl get deployments
+NAME                     DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployement-dev    1         1         1            1           13s
+nginx-deployement-prod   1         1         1            1           15m
+
+
+[root@k8s-master Builds]# kubectl describe deployments -l app=nginx-deployement-dev
+Name:                   nginx-deployement-dev
+Namespace:              default
+CreationTimestamp:      Thu, 18 Jan 2018 07:16:09 +0000
+Labels:                 app=nginx-deployement-dev
+Selector:               app=nginx-deployement-dev
+Replicas:               1 updated | 1 total | 1 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  1 max unavailable, 1 max surge
+Conditions:
+  Type          Status  Reason
+  ----          ------  ------
+  Available     True    MinimumReplicasAvailable
+OldReplicaSets: <none>
+NewReplicaSet:  nginx-deployement-dev-2804140471 (1/1 replicas created)
+Events:
+  FirstSeen     LastSeen        Count   From                            SubObjectPath   Type            Reason                  Message
+  ---------     --------        -----   ----                            -------------   --------        ------                  -------
+  3m            3m              1       {deployment-controller }                        Normal          ScalingReplicaSet       Scaled up replica set nginx-deployement-dev-2804140471 to 1
+
+  
+Now you could see that a container is been created in one of the minions like below.
+
+[root@k8s-minion1 ~]# docker ps
+CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS              PORTS               NAMES
+c9bc7420d01e        nginx:1.7.9                                "nginx -g 'daemon off"   39 minutes ago      Up 39 minutes                           k8s_nginx-deployement-dev.4756072e_nginx-deployement-dev-2804140471-cldj6_default_74da6d9d-fc1f-11e7-9697-42010a8e0002_e51aa549
+
+
+How to update your existing deployment ?? :: PFB process
+
+=============================================================================
+
+[root@k8s-master Builds]# cat nginx-development-dev_update.yml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-deployement-dev
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx-deployement-dev
+    spec:
+      containers:
+      - name: nginx-deployement-dev
+        image: nginx:1.8
+        ports:
+        - containerPort: 80
+
+		
+Lets change the version of nginx to "1.8" and try to run the below.
+
+Before Applying the changes:
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                                      READY     STATUS    RESTARTS   AGE
+nginx                                     1/1       Running   1          20h
+nginx-deployement-dev-2804140471-cldj6    1/1       Running   0          1h
+nginx-deployement-prod-1557711524-1jgkj   1/1       Running   0          1h
+nginx2                                    1/1       Running   1          20h
+
+
+[root@k8s-master Builds]# kubectl apply -f nginx-development-dev_update.yml
+deployment "nginx-deployement-dev" configured
+
+
+After Applying the changes:
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                                      READY     STATUS    RESTARTS   AGE
+nginx                                     1/1       Running   1          20h
+nginx-deployement-dev-2740832593-1txpj    1/1       Running   0          15s
+nginx-deployement-prod-1557711524-1jgkj   1/1       Running   0          1h
+nginx2                                    1/1       Running   1          20h
+
+
+You could see that your pod "dev" has restarted and it shows 15s ...
+
+Now lets check the latest updated docker containers as part of our change.
+
+[root@k8s-master Builds]# kubectl get deployments
+NAME                     DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployement-dev    1         1         1            1           1h
+nginx-deployement-prod   1         1         1            1           2h
+
+
+[root@k8s-master Builds]# kubectl get deployments
+NAME                     DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployement-dev    1         1         1            1           1h
+nginx-deployement-prod   1         1         1            1           2h
+
+
+[root@k8s-master Builds]# kubectl describe deployments nginx-deployement-dev
+Name:                   nginx-deployement-dev
+Namespace:              default
+CreationTimestamp:      Thu, 18 Jan 2018 07:16:09 +0000
+Labels:                 app=nginx-deployement-dev
+Selector:               app=nginx-deployement-dev
+Replicas:               1 updated | 1 total | 1 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  1 max unavailable, 1 max surge
+Conditions:
+  Type          Status  Reason
+  ----          ------  ------
+  Available     True    MinimumReplicasAvailable
+OldReplicaSets: <none>
+NewReplicaSet:  nginx-deployement-dev-2740832593 (1/1 replicas created)
+Events:
+  FirstSeen     LastSeen        Count   From                            SubObjectPath   Type            Reason                  Message
+  ---------     --------        -----   ----                            -------------   --------        ------                  -------
+  18m           18m             1       {deployment-controller }                        Normal          ScalingReplicaSet       Scaled up replica set nginx-deployement-dev-2740832593 to 1
+  18m           18m             1       {deployment-controller }                        Normal          ScalingReplicaSet       Scaled down replica set nginx-deployement-dev-2804140471 to 0
+
+
+Now check which in which nodes your pods are there:
+
+[root@k8s-master Builds]# kubectl describe pods nginx-deployement-dev-2740832593-1txpj
+Name:           nginx-deployement-dev-2740832593-1txpj
+Namespace:      default
+Node:           k8s-minion2/10.142.0.4
+Start Time:     Thu, 18 Jan 2018 09:00:01 +0000
+Labels:         app=nginx-deployement-dev
+                pod-template-hash=2740832593
+Status:         Running
+IP:             172.17.0.4
+Controllers:    ReplicaSet/nginx-deployement-dev-2740832593
+Containers:
+  nginx-deployement-dev:
+    Container ID:               docker://684cc9879b71b409ffad732190dd6451dde11dadedbbd25ba5d395dc03244d7b
+    Image:                      nginx:1.8
+    Image ID:                   docker-pullable://docker.io/nginx@sha256:c97ee70c4048fe79765f7c2ec0931957c2898f47400128f4f3640d0ae5d60d10
+    Port:                       80/TCP
+    State:                      Running
+      Started:                  Thu, 18 Jan 2018 09:00:11 +0000
+    Ready:                      True
+    Restart Count:              0
+    Volume Mounts:              <none>
+    Environment Variables:      <none>
+Conditions:
+  Type          Status
+  Initialized   True
+  Ready         True
+  PodScheduled  True
+No volumes.
+QoS Class:      BestEffort
+Tolerations:    <none>
+Events:
+  FirstSeen     LastSeen        Count   From                    SubObjectPath                           Type            Reason                  Message
+  ---------     --------        -----   ----                    -------------                           --------        ------                  -------
+  21m           21m             1       {default-scheduler }                                            Normal          Scheduled               Successfully assigned nginx-deployement-dev-2740832593-1txpj to k8s-minion2
+  21m           21m             1       {kubelet k8s-minion2}   spec.containers{nginx-deployement-dev}  Normal          Pulling                 pulling image "nginx:1.8"
+  21m           21m             2       {kubelet k8s-minion2}                                           Warning         MissingClusterDNS       kubelet does not have ClusterDNS IP configured and cannot create Pod using "ClusterFirst" policy. Falling back to DNSDefault policy.
+  21m           21m             1       {kubelet k8s-minion2}   spec.containers{nginx-deployement-dev}  Normal          Pulled                  Successfully pulled image "nginx:1.8"
+  21m           21m             1       {kubelet k8s-minion2}   spec.containers{nginx-deployement-dev}  Normal          Created                 Created container with docker id 684cc9879b71; Security:[seccomp=unconfined]
+  21m           21m             1       {kubelet k8s-minion2}   spec.containers{nginx-deployement-dev}  Normal          Started                 Started container with docker id 684cc9879b71
+
+  
+From the above output we can check that new container got created and assigned to "k8s-minion2"
+
+Now got to k8s-minion2 and verify the containers.
+
+Before change:
+
+[root@k8s-minino2 ~]# docker ps
+CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS              PORTS               NAMES
+c247d97f5264        nginx:1.7.9                                "nginx -g 'daemon off"   54 minutes ago      Up 54 minutes                           k8s_nginx-deployement-prd.946007a4_nginx-deployement-prod-1557711524-1jgkj_default_52a7bb80-fc1d-11e7-9697-42010a8e0002_34fc84b7
+5bfb64b4e3d8        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 54 minutes ago      Up 54 minutes                           k8s_POD.b2390301_nginx-dployement-prod-1557711524-1jgkj_default_52a7bb80-fc1d-11e7-9697-42010a8e0002_4adda87d
+06011cfa0681        nginx:1.7.9                                "nginx -g 'daemon off"   About an hour ago   Up About an hour                        k8s_nginx.b0df00ef_nginxdefault_f84196f7-fb7f-11e7-8776-42010a8e0002_73664997
+c6ee047311c9        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 About an hour ago   Up About an hour                        k8s_POD.b2390301_nginx_dfault_f84196f7-fb7f-11e7-8776-42010a8e0002_714cd55c
+
+
+After Change:
+
+[root@k8s-minino2 ~]# docker ps
+CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS              PORTS               NAMES
+684cc9879b71        nginx:1.8                                  "nginx -g 'daemon off"   22 minutes ago      Up 22 minutes                           k8s_nginx-deployement-dev.c3106c8_nginx-deployement-dev-2740832593-1txpj_default_f768a9a3-fc2d-11e7-9697-42010a8e0002_dd46962b
+7b158906ee72        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 22 minutes ago      Up 22 minutes                           k8s_POD.b2390301_nginx-deployement-dev-2740832593-1txpj_default_f768a9a3-fc2d-11e7-9697-42010a8e0002_fb66e361
+c247d97f5264        nginx:1.7.9                                "nginx -g 'daemon off"   2 hours ago         Up 2 hours                              k8s_nginx-deployement-prod.946007a4_nginx-deployement-prod-1557711524-1jgkj_default_52a7bb80-fc1d-11e7-9697-42010a8e0002_34fc84b7
+5bfb64b4e3d8        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 2 hours ago         Up 2 hours                              k8s_POD.b2390301_nginx-deployement-prod-1557711524-1jgkj_default_52a7bb80-fc1d-11e7-9697-42010a8e0002_4adda87d
+
+
+Note: we have two pods. if you observe the "DEV" pod you could see that you have your updated version "1.8" got installed. 
+
+You could see that "StrategyType:           RollingUpdate" of your deployment. Its showing things as "Rolling Update" which means that its in rolling update mode.
+
+Like this if you want to deploy or update your application you can do that accordingly as per above. 
+
+================================================================================================
+Testing:
+
+Now lets test deleting the pods like below.
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                                      READY     STATUS    RESTARTS   AGE
+nginx-deployement-dev-2740832593-1txpj    1/1       Running   0          52m
+nginx-deployement-prod-1557711524-1jgkj   1/1       Running   0          2h
+
+
+[root@k8s-master Builds]# kubectl delete pod nginx-deployement-dev-2740832593-1txpj
+pod "nginx-deployement-dev-2740832593-1txpj" deleted
+[root@k8s-master Builds]# kubectl delete pod nginx-deployement-prod-1557711524-1jgkj
+pod "nginx-deployement-prod-1557711524-1jgkj" deleted
+
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                                      READY     STATUS              RESTARTS   AGE
+nginx-deployement-dev-2740832593-n7vlz    0/1       ContainerCreating   0          8s
+nginx-deployement-prod-1557711524-0djgw   1/1       Running             0          3s
+
+if you observe though you deleted the pod you could see that the pod is automatically getting created as we have deployed the pod using "deployment". 
+
+If you want to delete the pod then you have to delete the deployment like below.
+
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                                      READY     STATUS    RESTARTS   AGE
+nginx-deployement-dev-2740832593-n7vlz    1/1       Running   0          18s
+nginx-deployement-prod-1557711524-0djgw   1/1       Running   0          13s
+[root@k8s-master Builds]# kubectl get deployments
+NAME                     DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployement-dev    1         1         1            1           2h
+nginx-deployement-prod   1         1         1            1           2h
+[root@k8s-master Builds]# kubectl delete deployment nginx-deployement-dev
+deployment "nginx-deployement-dev" deleted
+[root@k8s-master Builds]# kubectl get deployments
+NAME                     DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+nginx-deployement-prod   1         1         1            1           2h
+
+
+From the above we can conclude that your deployment is been deleted.
+
+
+=============================================================================
+Multi-Pod (Container) Replication Controller::
+
+
+[root@k8s-master Builds]# kubectl get pods
+No resources found.
+[root@k8s-master Builds]#
+
+
+Lets create a replication controller and use the below code.
+
+[root@k8s-master Builds]# cat nginx-multi-lable.yml
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: nginx-www
+spec:
+  replicas: 3
+  selector:
+    app: nginx
+  template:
+    metadata:
+      name: nginx
+      labels:
+        app: nginx
+
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          ports:
+            - containerPort: 80
+
+			
+[root@k8s-master Builds]# kubectl create -f nginx-multi-lable.yml
+replicationcontroller "nginx-www" created
+
+
+Here we are creating the replicator and we are creating 3 replicas which means that you will be having 3 containers and 3 pods which will be monitoring these containers based on the 
+configuration you defined
+
+For example please go throught the below detailed information :
+
+[root@k8s-master Builds]# kubectl get replicationcontroller
+NAME        DESIRED   CURRENT   READY     AGE
+nginx-www   3         3         3         2m
+
+
+Above will describe the status of our replicators
+
+
+[root@k8s-master Builds]# kubectl describe replicationcontroller
+Name:           nginx-www
+Namespace:      default
+Image(s):       nginx
+Selector:       app=nginx
+Labels:         app=nginx
+Replicas:       3 current / 3 desired
+Pods Status:    3 Running / 0 Waiting / 0 Succeeded / 0 Failed
+No volumes.
+Events:
+  FirstSeen     LastSeen        Count   From                            SubObjectPath   Type            Reason                  Message
+  ---------     --------        -----   ----                            -------------   --------        ------                  -------
+  2m            2m              1       {replication-controller }              Normal           SuccessfulCreate        Created pod: nginx-www-mqg84
+  2m            2m              1       {replication-controller }              Normal           SuccessfulCreate        Created pod: nginx-www-4hwg0
+  2m            2m              1       {replication-controller }              Normal           SuccessfulCreate        Created pod: nginx-www-jx3sv
+
+  
+[root@k8s-master Builds]# kubectl get pods
+NAME              READY     STATUS    RESTARTS   AGE
+nginx-www-4hwg0   1/1       Running   0          3m
+nginx-www-jx3sv   1/1       Running   0          3m
+nginx-www-mqg84   1/1       Running   0          3m
+
+[root@k8s-master Builds]# kubectl describe pods
+Name:           nginx-www-4hwg0
+Namespace:      default
+Node:           k8s-minion1/10.142.0.3
+Start Time:     Thu, 18 Jan 2018 10:14:20 +0000
+Labels:         app=nginx
+Status:         Running
+IP:             172.17.0.3
+Controllers:    ReplicationController/nginx-www
+Events:
+  FirstSeen     LastSeen        Count   From                    SubObjectPath  Type             Reason                  Message
+  ---------     --------        -----   ----                    -------------  -------- ------                  -------
+  3m            3m              1       {default-scheduler }                   Normal           Scheduled               Successfully assigned nginx-www-4hwg0 to k8s-minion1
+  3m            3m              2       {kubelet k8s-minion1}                  Warning          MissingClusterDNS       kubelet does not have ClusterDNS IP configured and cannot create Pod using "ClusterFirst" policy. Falli
+
+the above command will describe the pod details. From the above command output you can check from where the containers been created and which minino is hosting what container. 
+
+[root@k8s-master Builds]# kubectl get pods
+NAME              READY     STATUS    RESTARTS   AGE
+nginx-www-4hwg0   1/1       Running   0          5m
+nginx-www-jx3sv   1/1       Running   0          5m
+nginx-www-mqg84   1/1       Running   0          5m
+
+
+[root@k8s-master Builds]# kubectl get services
+NAME         CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+kubernetes   10.254.0.1   <none>        443/TCP   23h
+
+
+Testing:
+
+Now lets test the replication by deleting the pod and will check if it is getting created automatically or not.
+
+[root@k8s-master Builds]# kubectl get pods
+NAME              READY     STATUS    RESTARTS   AGE
+nginx-www-4hwg0   1/1       Running   0          5m
+nginx-www-jx3sv   1/1       Running   0          5m
+nginx-www-mqg84   1/1       Running   0          5m
+
+
+[root@k8s-master Builds]# kubectl delete pod nginx-www-4hwg0
+pod "nginx-www-4hwg0" deleted
+
+
+[root@k8s-master Builds]# kubectl get pods
+NAME              READY     STATUS    RESTARTS   AGE
+nginx-www-gk6hc   1/1       Running   0          6s
+nginx-www-jx3sv   1/1       Running   0          6m
+nginx-www-mqg84   1/1       Running   0          6m
+
+
+If you have observed above we have deleted "nginx-www-4hwg0" and we could see that immediately soon after we deleted the pod a new pod got created. and you no where find 
+"nginx-www-4hwg0" your previous pod.
+
+Finally if you want to delete the replicationcontroller you can delete it using below.
+
+[root@k8s-master Builds]# kubectl get replicationcontrollers
+NAME        DESIRED   CURRENT   READY     AGE
+nginx-www   3         3         3         8m
+
+[root@k8s-master Builds]# kubectl delete replicationcontroller nginx-www
+replicationcontroller "nginx-www" deleted
+
+
+[root@k8s-master Builds]# kubectl get replicationcontrollers
+No resources found.
+
+
+Now even no pods,no conatiners nothing will be available as we don't have the core replicationcontroller as part of the machine. 
+
+Note: If you observer both replication-controller and deployment both are doing the same job. But the main difference is as below.
+
+Deployments are a newer and higher level concept than Replication Controllers. They manage the deployment of Replica Sets (also a newer concept, but pretty much equivalent 
+to Replication Controllers), and allow for easy updating of a Replica Set as well as the ability to roll back to a previous deployment.
+
+===============================================================================================
+Create and Deploy Service Definitions ::
+
+
+First  make sure that we don't have replicationcontroller,pods,containers are not running as per of the configuration
+
+[root@k8s-master Builds]# kubectl get replicationcontrollers
+No resources found.
+[root@k8s-master Builds]# kubectl get pods
+No resources found.
+
+
+Now lets create our replicationcontroller 
+
+[root@k8s-master Builds]# kubectl create -f nginx-multi-lable.yml
+replicationcontroller "nginx-www" created
+[root@k8s-master Builds]# kubectl get pods
+NAME              READY     STATUS    RESTARTS   AGE
+nginx-www-d193x   1/1       Running   0          7s
+nginx-www-flkn2   1/1       Running   0          7s
+nginx-www-lx03t   1/1       Running   0          7s
+[root@k8s-master Builds]# kubectl get nodes
+NAME          STATUS    AGE
+k8s-minion1   Ready     1d
+k8s-minion2   Ready     1d
+[root@k8s-master Builds]#
+
+
+Now lets create a service for this 
+
+1. Creating Service:
+
+
+[root@k8s-master Builds]# kubectl get nodes
+NAME          STATUS    AGE
+k8s-minion1   Ready     1d
+k8s-minion2   Ready     1d
+
+vim nginx-service.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+
+spec:
+  ports:
+    - port: 8000
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app: nginx
+
+
+	
+[root@k8s-master Builds]# kubectl create -f nginx-service.yml
+service "nginx-service" created
+
+2. Checking the services:
+
+[root@k8s-master Builds]# kubectl get services
+NAME            CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+kubernetes      10.254.0.1      <none>        443/TCP    1d
+nginx-service   10.254.24.198   <none>        8000/TCP   13s
+
+
+root@k8s-master Builds]# kubectl get services
+NAME            CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+kubernetes      10.254.0.1      <none>        443/TCP    1d
+nginx-service   10.254.24.198   <none>        8000/TCP   1m
+
+[root@k8s-master Builds]# kubectl describe service nginx-service
+Name:                   nginx-service
+Namespace:              default
+Labels:                 <none>
+Selector:               app=nginx
+Type:                   ClusterIP
+IP:                     10.254.24.198
+Port:                   <unset> 8000/TCP
+Endpoints:              172.17.0.2:80,172.17.0.2:80,172.17.0.3:80
+Session Affinity:       None
+No events.
+
+
+3. BusyBox:
+
+Busybox is an image where you can login and verify the linux command. Insimple its a simplified constrianed 300 commands linux image. 
+
+
+If you observe above soonafter creating our service you have recieved a common ip address "10.254.24.198". Which means that this ip is acting like a load balencer so finally !! 
+if you want to access any of the containers your loadbalencer ip acts like a single point of conatact where you can communicate to all the docker clients which you have created. 
+
+
+You can Create and login to the busybox by creating it in the form of a pod like below.
+
+[root@k8s-master Builds]# kubectl run -i --tty busybox --image=busybox --restart=Never --generator=run-pod/v1 -- sh
+Waiting for pod default/busybox to be running, status is Pending, pod ready: false
+If you don't see a command prompt, try pressing enter.
+/ #
+
+
+/ # ifconfig -a
+eth0      Link encap:Ethernet  HWaddr 02:42:AC:11:00:03
+          inet addr:172.17.0.3  Bcast:0.0.0.0  Mask:255.255.0.0
+          inet6 addr: fe80::42:acff:fe11:3/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:10 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:3 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:816 (816.0 B)  TX bytes:258 (258.0 B)
+		  
+		  
+/ # exit
+Waiting for pod default/busybox to terminate, status is Running
+[root@k8s-master Builds]#
+
+4. Checking the status of the application, in our case "nginx"
+
+/ # wget -qO- http://10.254.24.198:8000
+wget: can't connect to remote host (10.254.24.198): Connection refused
+/ # wget http://10.254.24.198:8000
+Connecting to 10.254.24.198:8000 (10.254.24.198:8000)
+index.html           100% |*******************************|   612   0:00:00 ETA
+/ # cat index.html
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+/ # exit
+Waiting for pod default/busybox to terminate, status is Running
+
+5. Deleting the busybox image pod:
+
+You Can delete the box using below.
+
+[root@k8s-master Builds]# kubectl delete pods  busybox
+pod "busybox" deleted
+
+[root@k8s-master Builds]# kubectl get pods
+NAME              READY     STATUS        RESTARTS   AGE
+busybox           1/1       Terminating   0          2m
+nginx-www-d193x   1/1       Running       0          30m
+nginx-www-flkn2   1/1       Running       0          30m
+nginx-www-lx03t   1/1       Running       0          30m
+
+
+kubectl exec -it busybox sh :-> Helps to login to the busybox
+
+If you want to login to the pod then you can do it via below.
+
+[root@k8s-master Builds]# kubectl exec -it nginx-www-d193x -- /bin/bash
+root@nginx-www-d193x:/#
+root@nginx-www-d193x:/#
+root@nginx-www-d193x:/#
+root@nginx-www-d193x:/# df -hT
+Filesystem                                                                                       Type   Size  Used Avail Use% Mounted on
+/dev/mapper/docker-8:1-25227465-7444bc4bccb711974e7ae20e071e15257c4f29c3795a062c8afc2d21cae7697b xfs     10G  147M  9.9G   2% /
+tmpfs                                                                                            tmpfs  920M     0  920M   0% /dev
+tmpfs                                                                                            tmpfs  920M     0  920M   0% /sys/fs/cgroup
+/dev/sda1                                                                                        xfs     10G  2.5G  7.6G  25% /etc/hosts
+shm                                                                                              tmpfs   64M     0   64M   0% /dev/shm
+root@nginx-www-d193x:/#
+
+Deleting the pods & replication controllers:
+
+[root@k8s-master Builds]# kubectl get services
+NAME            CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+kubernetes      10.254.0.1      <none>        443/TCP    1d
+nginx-service   10.254.24.198   <none>        8000/TCP   18h
+[root@k8s-master Builds]# kubectl delete service nginx-service
+service "nginx-service" deleted
+[root@k8s-master Builds]# kubectl get services
+NAME         CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+kubernetes   10.254.0.1   <none>        443/TCP   1d
+[root@k8s-master Builds]# kubectl get pods
+NAME              READY     STATUS    RESTARTS   AGE
+busybox           1/1       Running   0          1h
+nginx-www-d193x   1/1       Running   1          18h
+nginx-www-flkn2   1/1       Running   1          18h
+nginx-www-lx03t   1/1       Running   1          18h
+[root@k8s-master Builds]# kubectl get replicationcontrollers
+NAME        DESIRED   CURRENT   READY     AGE
+nginx-www   3         3         3         18h
+[root@k8s-master Builds]# kubectl delete replicationcontroller nginx-www
+replicationcontroller "nginx-www" deleted
+
+
+
+[root@k8s-master Builds]# kubectl get replicationcontrollers
+No resources found.
+
+
+Now even no pods,no conatiners nothing will be available as we don't have the core replicationcontroller as part of the machine. 
+
+Note: If you observer both replication-controller and deployment both are doing the same job. But the main difference is as below.
+
+Deployments are a newer and higher level concept than Replication Controllers. They manage the deployment of Replica Sets (also a newer concept, but pretty much equivalent 
+to Replication Controllers), and allow for easy updating of a Replica Set as well as the ability to roll back to a previous deployment.
+
+
+Create and Deploy Service Definitions ::
+
+First  make sure that we don't have replicationcontroller,pods,containers are not running as per of the configuration
+
+[root@k8s-master Builds]# kubectl get replicationcontrollers
+No resources found.
+[root@k8s-master Builds]# kubectl get pods
+No resources found.
+
+
+Now lets create our replicationcontroller 
+
+[root@k8s-master Builds]# kubectl create -f nginx-multi-lable.yml
+replicationcontroller "nginx-www" created
+[root@k8s-master Builds]# kubectl get pods
+NAME              READY     STATUS    RESTARTS   AGE
+nginx-www-d193x   1/1       Running   0          7s
+nginx-www-flkn2   1/1       Running   0          7s
+nginx-www-lx03t   1/1       Running   0          7s
+[root@k8s-master Builds]# kubectl get nodes
+NAME          STATUS    AGE
+k8s-minion1   Ready     1d
+k8s-minion2   Ready     1d
+[root@k8s-master Builds]#
+
+
+Now lets create a service for this 
+
+1. Creating Service:
+
+
+[root@k8s-master Builds]# kubectl get nodes
+NAME          STATUS    AGE
+k8s-minion1   Ready     1d
+k8s-minion2   Ready     1d
+
+vim nginx-service.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+
+spec:
+  ports:
+    - port: 8000
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app: nginx
+
+
+	
+[root@k8s-master Builds]# kubectl create -f nginx-service.yml
+service "nginx-service" created
+
+2. Checking the services:
+
+[root@k8s-master Builds]# kubectl get services
+NAME            CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+kubernetes      10.254.0.1      <none>        443/TCP    1d
+nginx-service   10.254.24.198   <none>        8000/TCP   13s
+
+
+root@k8s-master Builds]# kubectl get services
+NAME            CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+kubernetes      10.254.0.1      <none>        443/TCP    1d
+nginx-service   10.254.24.198   <none>        8000/TCP   1m
+[root@k8s-master Builds]# kubectl describe service nginx-service
+Name:                   nginx-service
+Namespace:              default
+Labels:                 <none>
+Selector:               app=nginx
+Type:                   ClusterIP
+IP:                     10.254.24.198
+Port:                   <unset> 8000/TCP
+Endpoints:              172.17.0.2:80,172.17.0.2:80,172.17.0.3:80
+Session Affinity:       None
+No events.
+
+
+3. BusyBox:
+
+Busybox is an image where you can login and verify the linux command. Insimple its a simplified constrianed 300 commands linux image. 
+
+
+If you observe above soonafter creating our service you have recieved a common ip address "10.254.24.198". Which means that this ip is acting like a load balencer so finally !! 
+if you want to access any of the containers your loadbalencer ip acts like a single point of conatact where you can communicate to all the docker clients which you have created. 
+
+
+You can Create and login to the busybox by creating it in the form of a pod like below.
+
+[root@k8s-master Builds]# kubectl run -i --tty busybox --image=busybox --restart=Never --generator=run-pod/v1 -- sh
+Waiting for pod default/busybox to be running, status is Pending, pod ready: false
+If you don't see a command prompt, try pressing enter.
+/ #
+
+
+/ # ifconfig -a
+eth0      Link encap:Ethernet  HWaddr 02:42:AC:11:00:03
+          inet addr:172.17.0.3  Bcast:0.0.0.0  Mask:255.255.0.0
+          inet6 addr: fe80::42:acff:fe11:3/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:10 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:3 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:816 (816.0 B)  TX bytes:258 (258.0 B)
+		  
+		  
+/ # exit
+Waiting for pod default/busybox to terminate, status is Running
+[root@k8s-master Builds]#
+
+4. Checking the status of the application, in our case "nginx"
+
+/ # wget -qO- http://10.254.24.198:8000
+wget: can't connect to remote host (10.254.24.198): Connection refused
+/ # wget http://10.254.24.198:8000
+Connecting to 10.254.24.198:8000 (10.254.24.198:8000)
+index.html           100% |*******************************|   612   0:00:00 ETA
+/ # cat index.html
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+/ # exit
+Waiting for pod default/busybox to terminate, status is Running
+
+5. Deleting the busybox image pod:
+
+You Can delete the box using below.
+
+[root@k8s-master Builds]# kubectl delete pods  busybox
+pod "busybox" deleted
+
+[root@k8s-master Builds]# kubectl get pods
+NAME              READY     STATUS        RESTARTS   AGE
+busybox           1/1       Terminating   0          2m
+nginx-www-d193x   1/1       Running       0          30m
+nginx-www-flkn2   1/1       Running       0          30m
+nginx-www-lx03t   1/1       Running       0          30m
+
+
+kubectl exec -it busybox sh :-> Helps to login to the busybox
+
+If you want to login to the pod then you can do it via below.
+
+[root@k8s-master Builds]# kubectl exec -it nginx-www-d193x -- /bin/bash
+root@nginx-www-d193x:/#
+root@nginx-www-d193x:/#
+root@nginx-www-d193x:/#
+root@nginx-www-d193x:/# df -hT
+Filesystem                                                                                       Type   Size  Used Avail Use% Mounted on
+/dev/mapper/docker-8:1-25227465-7444bc4bccb711974e7ae20e071e15257c4f29c3795a062c8afc2d21cae7697b xfs     10G  147M  9.9G   2% /
+tmpfs                                                                                            tmpfs  920M     0  920M   0% /dev
+tmpfs                                                                                            tmpfs  920M     0  920M   0% /sys/fs/cgroup
+/dev/sda1                                                                                        xfs     10G  2.5G  7.6G  25% /etc/hosts
+shm                                                                                              tmpfs   64M     0   64M   0% /dev/shm
+root@nginx-www-d193x:/#
+
+
+Deleting the pods & replication controllers:
+
+[root@k8s-master Builds]# kubectl get services
+NAME            CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+kubernetes      10.254.0.1      <none>        443/TCP    1d
+nginx-service   10.254.24.198   <none>        8000/TCP   18h
+[root@k8s-master Builds]# kubectl delete service nginx-service
+service "nginx-service" deleted
+
+[root@k8s-master Builds]# kubectl get services
+NAME         CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+kubernetes   10.254.0.1   <none>        443/TCP   1d
+
+[root@k8s-master Builds]# kubectl get pods
+NAME              READY     STATUS    RESTARTS   AGE
+busybox           1/1       Running   0          1h
+nginx-www-d193x   1/1       Running   1          18h
+nginx-www-flkn2   1/1       Running   1          18h
+nginx-www-lx03t   1/1       Running   1          18h
+
+[root@k8s-master Builds]# kubectl get replicationcontrollers
+NAME        DESIRED   CURRENT   READY     AGE
+nginx-www   3         3         3         18h
+[root@k8s-master Builds]# kubectl delete replicationcontroller nginx-www
+replicationcontroller "nginx-www" deleted
+
+=========================================================================================
+
+Logs, Scaling and Recovery ::
+
+Till now we have created everything as part of compose file format ! but now lets try normal commands and check if its working or not. 
+
+
+Creating a pod.
+
+[root@k8s-master Builds]# kubectl run apache --image=nginx
+deployment "apache" created
+
+By default you will be getting deployments created. 
+
+[root@k8s-master Builds]# kubectl get deployments
+NAME       DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+apache     1         1         1            1           15s
+
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                     READY     STATUS    RESTARTS   AGE
+apache-626235580-86nd6   1/1       Running   0          45s
+
+
+If you observe above pods you could observe that extra id is added, this id is part and parcle of our deployement id. 
+
+If you want to check where your container is created, you can simply check the pod or via deployments you can check the containers details.
+
+[root@k8s-master Builds]# kubectl describe deployments apache
+Name:                   apache
+Namespace:              default
+CreationTimestamp:      Fri, 19 Jan 2018 06:53:30 +0000
+Labels:                 run=apache
+Selector:               run=apache
+Replicas:               1 updated | 1 total | 1 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  1 max unavailable, 1 max surge
+Conditions:
+  Type          Status  Reason
+  ----          ------  ------
+  Available     True    MinimumReplicasAvailable
+OldReplicaSets: <none>
+NewReplicaSet:  apache-626235580 (1/1 replicas created)
+Events:
+  FirstSeen     LastSeen        Count   From                            SubObjectPath   Type            Reason                  Message
+  ---------     --------        -----   ----                            -------------   --------        ------                  -------
+  1m            1m              1       {deployment-controller }               Normal           ScalingReplicaSet       Scaled up replica set apache-626235580 to 1
+
+  
+If you observe it properly "apache-626235580 to 1" from this id and from above pods details "apache-626235580-86nd6". From both these we can conclude that pods are getting info 
+from deployements & vice versa ..
+
+If you want to create more than one pod using replication you can simply issue the below command. 
+
+=====================================================================================
+
+Replicas:
+
+kubectl run myreplicas --image=nginx --replicas=2 --labels=app=myapache,version=1.0
+
+[root@k8s-master Builds]# kubectl describe deployments myreplicas
+Name:                   myreplicas
+Namespace:              default
+CreationTimestamp:      Fri, 19 Jan 2018 07:24:02 +0000
+Labels:                 app=myapache
+                        version=1.0
+Selector:               app=myapache,version=1.0
+Replicas:               2 updated | 2 total | 2 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  1 max unavailable, 1 max surge
+Conditions:
+  Type          Status  Reason
+  ----          ------  ------
+  Available     True    MinimumReplicasAvailable
+OldReplicaSets: <none>
+NewReplicaSet:  myreplicas-578592596 (2/2 replicas created)
+Events:
+  FirstSeen     LastSeen        Count   From                            SubObjectPath   Type            Reason Message
+  ---------     --------        -----   ----                            -------------   --------        ------ -------
+  2m            2m              1       {deployment-controller }                        Normal          ScalingReplicaSet       Scaled up replica set myreplicas-578592596 to 2
+
+=====================================================================================
+  
+Interacting with Pod Containers ::
+
+Pre-Check:
+
+[root@k8s-master Builds]# kubectl get pods
+No resources found.
+[root@k8s-master Builds]# kubectl get deployments
+No resources found.
+[root@k8s-master Builds]#
+
+Lets create a new file caled myapache.yml and write some data to it like below.
+
+[root@k8s-master Builds]# cat myapache.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapache
+
+spec:
+  containers:
+    - name: myapache
+      image: nginx
+      ports:
+        - containerPort: 80
+
+		
+here we are simply creating a normal container which is having a port "80". 
+
+
+Post Checks:
+
+[root@k8s-master Builds]# kubectl create -f myapache.yml
+pod "myapache" created
+[root@k8s-master Builds]# kubectl get pods
+NAME       READY     STATUS    RESTARTS   AGE
+myapache   1/1       Running   0          6s
+
+
+Now you could see that you have your pods go detected !!
+
+
+
+[root@k8s-master Builds]# kubectl describe pod myapache
+Name:           myapache
+Namespace:      default
+Node:           k8s-minion1/10.142.0.3
+Start Time:     Fri, 19 Jan 2018 07:35:39 +0000
+Labels:         <none>
+Status:         Running
+IP:             172.17.0.2
+Controllers:    <none>
+Containers:
+  myapache:
+    Container ID:               docker://0f3ab255b236b05f4f359f922636a755b1bbddf3303dfa23114a94d7b6c7756f
+    Image:                      nginx
+    Image ID:                   docker-pullable://docker.io/nginx@sha256:285b49d42c703fdf257d1e2422765c4ba9d3e37768d6ea83d7fe2043dad6e63d
+    Port:                       80/TCP
+    State:                      Running
+      Started:                  Fri, 19 Jan 2018 07:35:41 +0000
+    Ready:                      True
+    Restart Count:              0
+    Volume Mounts:              <none>
+    Environment Variables:      <none>
+Conditions:
+  Type          Status
+  Initialized   True
+  Ready         True
+  PodScheduled  True
+No volumes.
+QoS Class:      BestEffort
+Tolerations:    <none>
+Events:
+  FirstSeen     LastSeen        Count   From                    SubObjectPath  Type             Reason                  Message
+  ---------     --------        -----   ----                    -------------  -------- ------                  -------
+  3m            3m              1       {default-scheduler }                   Normal           Scheduled               Successfully assigned myapache to k8s-minion1
+  3m            3m              2       {kubelet k8s-minion1}                  Warning          MissingClusterDNS       kubelet does not have ClusterDNS IP configured and cannot create Pod using "ClusterFirst" policy. Falling back to DNSDefault policy.
+  3m            3m              1       {kubelet k8s-minion1}   spec.containers{myapache}       Normal          Pulling                 pulling image "nginx"
+  3m            3m              1       {kubelet k8s-minion1}   spec.containers{myapache}       Normal          Pulled                  Successfully pulled image "nginx"
+  3m            3m              1       {kubelet k8s-minion1}   spec.containers{myapache}       Normal          Created                 Created container with docker id 0f3ab255b236; Security:[seccomp=unconfined]
+  3m            3m              1       {kubelet k8s-minion1}   spec.containers{myapache}       Normal          Started                 Started container with docker id 0f3ab255b236
+
+  
+Executing the remote command on a pod:
+
+[root@k8s-master Builds]#  kubectl get pods
+NAME       READY     STATUS    RESTARTS   AGE
+myapache   1/1       Running   0          4m
+[root@k8s-master Builds]#
+
+
+[root@k8s-master Builds]# kubectl exec myapache date
+Fri Jan 19 07:40:19 UTC 2018
+[root@k8s-master Builds]#
+
+
+Loggin in to the pod's first container:
+
+[root@k8s-master Builds]# kubectl exec myapache -it -- /bin/bash
+root@myapache:/# 
+
+Now if you have observed you coulde see that prompt has changed which means that you are part of the first container of the pod myapache
+
+Once you are done with the executing above commands, now you are part of your containers. Here you can run what ever you want based up on the requirement. 
+
+Logs:
+
+[root@k8s-master Builds]# kubectl get pods
+NAME       READY     STATUS    RESTARTS   AGE
+myapache   1/1       Running   0          2h
+[root@k8s-master Builds]#
+
+
+kubectl logs myapache
+kubectl logs --tail=1 myapche
+kubectl logs --tail=1 myapache
+kubectl logs --since=24h myapache
+kubectl logs -f myapache
+
+Above Commands helps to check the logs of respective pods .... 
+
+=========================================================================================
+
+Autoscaling and Scaling our Pods ::
+
+If you want to create autoscalling you can simply execute the below 
+
+1. Creating a deployment
+[root@k8s-master Builds]# kubectl run myautoscale --image=nginx --port=80 --labels=app=myautoscale
+deployment "myautoscale" created
+
+
+[root@k8s-master Builds]# kubectl get deployments
+NAME          DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+myautoscale   1         1         1            1           8s
+[root@k8s-master Builds]# kubectl get pods
+NAME                           READY     STATUS    RESTARTS   AGE
+myautoscale-3958947512-mr800   1/1       Running   0          26s
+
+
+2. Now our requirement is we have only one pod and each pod is running with only once container. Now our requirement is to increase the pod size to minimum number and to 
+increase max 
+
+Syntax:
+
+kubectl autoscale (-f FILENAME | TYPE NAME | TYPE/NAME) [--min=MINPODS]
+--max=MAXPODS [--cpu-percent=CPU] [flags] [options]
+
+[root@k8s-master Builds]# kubectl get deployments
+NAME          DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+myautoscale   1         1         1            1           1m
+
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                           READY     STATUS    RESTARTS   AGE
+myautoscale-3958947512-mr800   1/1       Running   0          3m
+
+
+[root@k8s-master Builds]# kubectl autoscale deployment myautoscale --min=2 --max=6
+deployment "myautoscale" autoscaled
+
+Testing:
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                           READY     STATUS    RESTARTS   AGE
+myautoscale-3958947512-dxw02   1/1       Running   0          5s
+myautoscale-3958947512-mr800   1/1       Running   0          3m
+[root@k8s-master Builds]# kubectl get deployments
+NAME          DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+myautoscale   2         2         2            2           4m
+
+
+3. You cannot use autoscale option for scalling up the max or min number of pods.
+
+SO please use the below options.
+
+[root@k8s-master Builds]# kubectl scale --current-replicas=2 --replicas=4 deployment/myautoscale
+deployment "myautoscale" scaled
+
+[root@k8s-master Builds]# kubectl get deployment
+NAME          DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+myautoscale   4         4         4            4           6m
+
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                           READY     STATUS    RESTARTS   AGE
+myautoscale-3958947512-dxw02   1/1       Running   0          3m
+myautoscale-3958947512-mr800   1/1       Running   0          6m
+myautoscale-3958947512-pgft9   1/1       Running   0          21s
+myautoscale-3958947512-wqpq4   1/1       Running   0          21s
+
+
+From the above you can confirm that your replicas has been changed to "4"
+
+4. Scalling down :
+
+Note: If you are planning to scale down the replicas, you cannot scale down than the last minimum number of replicas you specified for the deployment. 
+
+In our case case our minimum replicas is 2 hence we cannot down the number than that ...
+
+[root@k8s-master Builds]# kubectl scale --current-replicas=4 --replicas=2 deployment/myautoscale
+deployment "myautoscale" scaled
+[root@k8s-master Builds]# kubectl get deployment
+NAME          DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+myautoscale   2         2         2            2           9m
+
+Note: If you want to specify the conditions for doing the autoscalling then you can do excute the below. 
+
+kubectl autoscale rc foo --max=5 --cpu-percent=80
+
+=====================================================================================
+Failure and Recovery ::
+
+In Master NOde:
+
+[root@k8s-master Builds]# 	
+deployment "myrecovery" created
+[root@k8s-master Builds]# kubectl get deployments
+NAME         DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+myrecovery   2         2         2            2           8s
+[root@k8s-master Builds]# kubectl get nodes
+NAME          STATUS    AGE
+k8s-minion1   Ready     1d
+k8s-minion2   Ready     1d
+[root@k8s-master Builds]# kubectl get pods
+NAME                          READY     STATUS    RESTARTS   AGE
+myrecovery-3755654676-dj2s5   1/1       Running   0          43m
+myrecovery-3755654676-kpd7x   1/1       Running   0          43m
+
+
+here we have created a deployement and it has a replica of "2". Now if you check the minimon 1 & 2 their container details are like below.
+
+
+minion1:
+
+[root@k8s-minion1 ~]# docker ps
+CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS              PORTS               NAMES
+c3bdaf07a0fa        nginx                                      "nginx -g 'daemon off"   42 minutes ago      Up 42 minutes                           k8s_myrecovery.1371ff8a_myrecovery-3755654676-dj2s5_default_3be2f3eb-fd06-11e7-9bf4-42010a8e0002_c595730f
+89a354a85fdc        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 42 minutes ago      Up 42 minutes                           k8s_POD.b2390301_myrecovery-3755654676-dj2s5_default_3be2f3eb-fd06-11e7-9bf4-42010a8e0002_ae79af09
+
+
+If you have observed here "k8s_POD.b2390301_myrecovery-3755654676-dj2s5" --> dj2s5 and if you check the pods in master node it is coming from the same pod "myrecovery-3755654676-dj2s5" in master.
+
+Similarly from minion2:
+
+
+[root@k8s-minino2 ~]# docker ps
+CONTAINER ID        IMAGE                                      COMMAND                  CREATED              STATUS              PORTS               NAMES
+1342bf03a259        nginx                                      "nginx -g 'daemon off"   About a minute ago   Up About a minute                       k8s_myrecovery.1371ff8a_myrecovery-3755654676-kpd7x_default_3be31006-fd06-11e7-9bf4-42010a8e0002_4aa37380
+aa577df3fe04        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 About a minute ago   Up About a minute                       k8s_POD.b2390301_myrecovery-3755654676-kpd7x_default_3be31006-fd06-11e7-9bf4-42010a8e0002_bc43fafb
+
+
+We are going to create a scenario !! Till now we are deploying our pods/deployments with replicas and autoscalling  and etc ... But just imagine what will happen if your minion has 
+gone or its entirely down.
+
+here the question is will your pod which is running as part of that minion will automatically move to the other minion whic is running fine ????
+
+lets check it out ...
+
+
+we have master , minion1 & minion2 :
+
+Let check the details.
+
+Step:1
+
+master:
+
+[root@k8s-master Builds]# kubectl get nodes
+NAME          STATUS    AGE
+k8s-minion1   Ready     2d
+k8s-minion2   Ready     2d
+[root@k8s-master Builds]# kubectl get pods
+NAME                          READY     STATUS    RESTARTS   AGE
+myrecovery-3755654676-8hrjs   1/1       Running   0          3m
+myrecovery-3755654676-kpd7x   1/1       Running   0          1h
+[root@k8s-master Builds]#
+
+
+
+minino1:
+
+[root@k8s-minion1 ~]# docker ps
+CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS              PORTS               NAMES
+b2b2f1b8918f        nginx                                      "nginx -g 'daemon off"   3 minutes ago       Up 3 minutes                            k8s_myrecovery.1371ff8a_myrecovery-3755654676-8hrjs_default_f819eb95-fd0f-11e7-9bf4-42010a8e0002_ddbe341b
+96e88a1fd544        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 3 minutes ago       Up 3 minutes                            k8s_POD.b2390301_myrecovery-3755654676-8hrjs_default_f819eb95-fd0f-11e7-9bf4-42010a8e0002_f3c51817
+[root@k8s-minion1 ~]#
+
+
+minion2:
+
+[root@k8s-minino2 ~]# docker ps
+CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS              PORTS               NAMES
+1342bf03a259        nginx                                      "nginx -g 'daemon off"   About an hour ago   Up About an hour                        k8s_myrecovery.1371ff8a_myrecovery-3755654676-kpd7x_default_3be31006-fd06-11e7-9bf4-42010a8e0002_4aa37380
+aa577df3fe04        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 About an hour ago   Up About an hour                        k8s_POD.b2390301_myrecovery-3755654676-kpd7x_default_3be31006-fd06-11e7-9bf4-42010a8e0002_bc43fafb
+
+Step 2:
+
+Now lets break one server in our case "minion1"
+
+
+[root@k8s-minion1 ~]# systemctl stop kube-proxy kubelet docker
+[root@k8s-minion1 ~]#
+
+
+[root@k8s-minion1 ~]# docker ps
+Cannot connect to the Docker daemon. Is the docker daemon running on this host?
+[root@k8s-minion1 ~]#
+
+Now in master:
+
+[root@k8s-master Builds]# kubectl get nodes
+NAME          STATUS     AGE
+k8s-minion1   NotReady   2d
+k8s-minion2   Ready      2d
+[root@k8s-master Builds]#
+
+Note: It will take some time for node getting down, pls wait !! :)
+
+[root@k8s-master Builds]# kubectl get pods
+NAME                          READY     STATUS    RESTARTS   AGE
+myrecovery-3755654676-8hrjs   1/1       Running   0          6m
+myrecovery-3755654676-kpd7x   1/1       Running   0          1h
+[root@k8s-master Builds]#
+
+
+
+Strangely if you observed above we could see that the pods exists and its status showing as running. Now check minion2 if we got our pod switched over there or not ...
+
+minion2:
+
+[root@k8s-minino2 ~]# docker ps
+CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS              PORTS               NAMES
+1342bf03a259        nginx                                      "nginx -g 'daemon off"   About an hour ago   Up About an hour                        k8s_myrecovery.1371ff8a_myrecovery-3755654676-kpd7x_default_3be31006-fd06-11e7-9bf4-42010a8e0002_4aa37380
+aa577df3fe04        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 About an hour ago   Up About an hour                        k8s_POD.b2390301_myrecovery-3755654676-kpd7x_default_3be31006-fd06-11e7-9bf4-42010a8e0002_bc43fafb
+
+
+Strangely we don't see our pod of minion1 switched automatically to minion2 because, it will take 3 minutes of time to do create a pod in the minion2 
+
+Lets bring our minion1 up and check whether we are getting our pod running or not ... (automatically)
+
+minion1:
+
+[root@k8s-minion1 ~]# systemctl start kube-proxy kubelet docker
+[root@k8s-minion1 ~]#
+
+master:
+
+[root@k8s-master Builds]# kubectl get nodes
+NAME          STATUS    AGE
+k8s-minion1   Ready     2d
+k8s-minion2   Ready     2d
+[root@k8s-master Builds]#
+
+
+minion1:
+
+but unfortunately we got the pod container to minion2 :) :) :)
+
+[root@k8s-minino2 ~]# docker ps
+CONTAINER ID        IMAGE                                      COMMAND                  CREATED             STATUS              PORTS               NAMES
+57cec27932a9        nginx                                      "nginx -g 'daemon off"   2 minutes ago       Up 2 minutes                            k8s_myrecovery.1371ff8a_myrecovery-3755654676-kzvmv_default_540d0387-fd11-11e7-9bf4-42010a8e0002_720b341b
+984c6d61b86f        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 2 minutes ago       Up 2 minutes                            k8s_POD.b2390301_myrecovery-3755654676-kzvmv_default_540d0387-fd11-11e7-9bf4-42010a8e0002_8da36c83
+1342bf03a259        nginx                                      "nginx -g 'daemon off"   About an hour ago   Up About an hour                        k8s_myrecovery.1371ff8a_myrecovery-3755654676-kpd7x_default_3be31006-fd06-11e7-9bf4-42010a8e0002_4aa37380
+aa577df3fe04        gcr.io/google_containers/pause-amd64:3.0   "/pause"                 About an hour ago   Up About an hour                        k8s_POD.b2390301_myrecovery-3755654676-kpd7x_default_3be31006-fd06-11e7-9bf4-42010a8e0002_bc43fafb
+
+
+
+Question:
+
+how to login to the conatiner when a pod is having multiple conatiners !!
+
+ans: kubectl exec -it my-pod --container main-app -- /bin/bash
+
+
+Example:
+
+[root@k8s-master mytest]# cat multi_pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis-django2
+  labels:
+    app: web
+spec:
+  containers:
+    - name: conatainer1
+      image: redis
+      ports:
+        - containerPort: 6379
+    - name: container2
+      image: nginx
+      ports:
+        - containerPort: 80
+
+[root@k8s-master mytest]# kubectl exec -it redis-django1 -c conatainer1 bash
+
+root@redis-django1:/data# id -a
+uid=0(root) gid=0(root) groups=0(root)
+
+root@redis-django1:/data# useradd container1
+root@redis-django1:/data# id -a container1
+uid=1000(container1) gid=1000(container1) groups=1000(container1)
+
+[root@k8s-master mytest]# kubectl exec -it redis-django1 -c container2 bash
+
+root@redis-django1:/# id -a container1
+id: 'container1': no such user
+
+root@redis-django1:/# useradd container2
+
+root@redis-django1:/# id -a container2
+uid=1000(container2) gid=1000(container2) groups=1000(container2)
+
+root@redis-django1:/# id -a container1
+id: 'container1': no such user
+
+
+
+Customized Commands:
+
+1. How to rejoin the node as worker node in kubernetes cluster.
+
+If you forget the token joining for the worker nodes to be part of the machine. In such cases please execute the below command.
+
+[root@k8s-master ~]# kubeadm token create --print-join-command
+kubeadm join --token 47fcad.f6eb6ff1e9a42954 10.142.0.2:6443 --discovery-token-ca-cert-hash sha256:4b90b17d496c483edf9aceabe9d2c11eee97a2a57279cde660e75fb9074aa1e0
+
+
+Now simply copy paster the command in the worker node where ever you want to make that node as slave node.
+
+
+=========================================================================================
+  kubernetes commands
+===================
+# kubectl get nodes       (worker nodes connected) 
+# kubectl get nodes -o wide
+# kubectl get cs          (show cluster health check )
+# kubectl get pods        (how many pods are available)
+# kubectl get deployments     [List all deployments ]
+# kubectl get services      [List the services with pods open ports ]
+# kubectl get services
+# kubectl get pods --all-namespaces=true -o wide
+# kubectl get pod  nginx-698898f666-ttznb -o yaml >nginx.yml  [create small yml file for nginx for depl]
+# kubectl get pods -n default
+# kubectl get pods -n kube-system
+# kubectl get pods -n prod
+
+# kubectl create namespace airdev
+# kubectl get namespaces
+# kubectl get pods --all-namespaces=true -o wide
+# kubectl --namespace=dev run nginx --image=nginx (create nginx under choice namespace)
+# kubectl get pods,deployments,replicasets -n prod
+
+
+----------
+$ kubectl config set-context $(kubectl config current-context) --namespace=air-dev
+Context "kubernetes-admin@kubernetes" modified.
+$ kubectl config get-contexts
+CURRENT   NAME                          CLUSTER      AUTHINFO           NAMESPACE
+*         kubernetes-admin@kubernetes   kubernetes   kubernetes-admin   air-dev
+----------
+
+# kubectl run nginx  --image nginx:alpine --port 80    (deploy nginx)
+# kubectl run nginx --image=nginx:alpine --port=80     (Create nginx pod)
+# 
+
+# kubectl expose deployment nginx --type=LoadBalancer
+# kubectl expose deployment nginx --type=NodePort      [Open to world]
+
+# kubectl get deployments 
+# kubectl delete deployment nginx         (To delete pod which is deployed)
+
+
+# kubectl config view           (all configuration views and cluster details)
+# kubectl config view --minify=true     (Active cluster details)
+# kubectl config get-contexts       (display how many cluster ans who is active)
+# kubectl config use-contexts minikube
+# kubectl config get-clusters       (To list clusters names )
+# kubectl config get-contexts       (To list current master )
+
+# kubectl cluster-info 
+
+# kubectl describe node kubeadm         (All description details of node)
+# kubectl describe deployment nginx     (Describe nginx deployment details )
+# kubectl describe pod nginx            (Describe nginx pod details )
+
+# kubectl create token [Using this command create new token and apply on node(token valid 24hr only) ]
+# kubeadm join 10.160.0.5:6443 --token z9clwa.dc1wa94gneju442o     --discovery-token-ca-cert-hash sha256:03765666203a5f6b02be03c8e2d0d3f11925a586fe8f5dc331e4c21dd168b507
+
+
+--kubeconfig=/opt/kube/production   (executing on cluster from other nodes using this file)
+# kubectl --kubeconfig=/opt/kube/production get pods --namespace=air | grep airapi4flexisearch | awk '{print $1}' >docker.txt 
+
+=====================================================================================
+Cheatsheet - Commonly used kubectl Commands
+kubectl config get-contexts                              # See all available contexts
+kubectl config view                                      # See current cluster context
+kubectl config set-context $(kubectl config current-context) --namespace=my-namespace
+                                                         # Change default namespace
+
+kubectl help run                                         # See help about run (or other commands)
+kubectl explain pod.spec                                 # Documenation on any resource attribute
+
+kubectl get nodes                                        # See nodes in cluster
+kubectl get pods -o wide                                 # See pods in current namespace
+kubectl get pod <name> -o yaml                           # See info about pod <name> in yaml format
+kubectl describe pod <name>                              # Show information about pod <name>
+kubectl describe service <name>                          # Show information about service <name>
+
+kubectl api-resources                                    # See resources types and abbreviations
+
+kubectl create namespace my-namespace                    # Create namespace
+                                                         # Set default namespace
+kubectl config set-context $(kubectl config current-context) --namespace=<my-namespace>
+
+kubectl run multitool --image=praqma/network-multitool --restart Never   # Create plain pod
+kubectl create deployment nginx --image=nginx:1.7.9      # Create deployment
+
+kubectl set image deployment/nginx nginx=nginx:1.9.1     # Update image in deployment pod template
+kubectl scale deployment nginx --replicas=4              # Scale deployment
+kubectl rollout status deployment/nginx                  # See rollout status
+kubectl rollout undo deployment/nginx                    # Undo a rollout
+
+kubectl exec -it <name> bash                             # Execute bash inside pod <name>
+kubectl exec -it <name> -- my-cmd -with -args            # Execute cmd with arguments inside pod
+
+kubectl delete pod <name>                                # Delete pod with name <name>
+kubectl delete deployment <name>                         # Delete deployment with name <name>
+
+kubectl expose deployment envtest --type=NodePort --port=3000  # Create service, expose deployment
+
+kubectl create configmap language --from-literal=LANGUAGE=Elvish  # Create configmap
+                                                         # Create secret
+kubectl create secret generic apikey --from-literal=API_KEY=oneringtorulethemall
+
+========================================================================================  
+
+Accessing and Enabling the Kubernetes Dash Board:
+
+1. Make sure that your network level firewall is enabled. Since we are using google cloud make sure that under firewall you are allowing all the traffic.
+
+2. Once done with the above make sure that you are enabling the hostlevel firewall as we are using centos7
+
+In our case we are gonna use ports between 9000-9050 hence I am enabling these ports on my machine using below.
+
+firewall-cmd --permanent --add-port=9000-9050/tcp
+firewall-cmd --reload
+
+3. Once done with the above configure the below.
+
+[root@k8s-master ~]# kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+
+Output:
+
+secret "kubernetes-dashboard-certs" created
+serviceaccount "kubernetes-dashboard" created
+role.rbac.authorization.k8s.io "kubernetes-dashboard-minimal" created
+rolebinding.rbac.authorization.k8s.io "kubernetes-dashboard-minimal" created
+deployment.apps "kubernetes-dashboard" created
+service "kubernetes-dashboard" created
+
+4. Creating the user credentials
+
+[root@k8s-master ~]# cat dashboard-admin.yaml
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+   name: kubernetes-dashboard
+   labels:
+     k8s-app: kubernetes-dashboard
+roleRef:
+   apiGroup: rbac.authorization.k8s.io
+   kind: ClusterRole
+   name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: kube-system
+
+  
+5. kubectl create -f dashboard-admin.yaml
+
+6. Enabling the proxy using below.
+
+[root@k8s-master ~]# ifconfig eth0
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1460
+        inet 10.142.0.2  netmask 255.255.255.255  broadcast 10.142.0.2
+        inet6 fe80::4001:aff:fe8e:2  prefixlen 64  scopeid 0x20<link>
+        ether 42:01:0a:8e:00:02  txqueuelen 1000  (Ethernet)
+        RX packets 81260  bytes 466818143 (445.1 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 55423  bytes 10874302 (10.3 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+[root@k8s-master ~]# nohup kubectl proxy --address="10.142.0.2" -p 9000 --accept-hosts='^*$' &
+[1] 25782
+[root@k8s-master ~]# nohup: ignoring input and appending output to ‘nohup.out’
+
+Note: Here dont forget to give the private ipaddress of your instance.
+
+7. Checking 
+
+[root@k8s-master ~]# netstat -nap|grep :9000
+tcp        0      0 10.142.0.2:9000         0.0.0.0:*               LISTEN      25782/kubectl
+
+8. Now simply open your console using below URL
+
+http://10.142.0.2:9000/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
+
+Note: select kubeconfig --> skip --> You can able to see content of all your cluster.
+
+======================================================================================
+Bringing the deployment to the external world !!!!
+
+1. Create the Deployment
+
+kubectl run my-nginx --replicas=2 --labels="run=nginx-backend" --image=nginx --port=80
+
+2. Create a service and expose it to a particular port and give your private ipaddress
+
+kubectl expose deployment my-nginx --type="LoadBalancer" --name=my-nginx --port=8080 --external-ip=10.142.0.2 --target-port=80
+
+Exposing a pod to the outside world !!!!!!
+
+[root@k8s-master mywork]# cat pod.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+  labels:
+    app: nginx-mine
+spec:
+  containers:
+   - name: nginx
+     image: nginx
+     ports:
+      - containerPort: 80
+
+kubectl expose pod nginx --type="LoadBalancer" --name=nginx --port=9001 --external-ip=10.142.0.2 --target-port=80
+
+Creating application with the volume ::
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-deployement-dev
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: nginx-deployement-dev
+    spec:
+    volumes:
+        - name: my-apache
+          hostPath:
+      path: /mydata
+      containers:
+      - name: nginx-deployement-dev
+        image: myimave
+    volumeMounts:
+          - name: my-apache
+            mountPath: /var/www/html/
+
+        ports:
+        - containerPort: 80
+
+=======================================================================================
+
+Difference commands in Docker and kubernetes: 
+=============================================
+
+docker run -itd --name nginx_server -p 8080:80 nginx:alpine 
+kubectl run ngnix --image=nginx:alpine
+=======================================================================================

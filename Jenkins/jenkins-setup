@@ -1,0 +1,191 @@
+					JENKINS SERVER  ---> setup on EC2 instance
+
+=============================================================================
+=============================================================================
+
+Prerequisites
+
+
+Install Jenkins on AWS EC2
+
+Jenkins is a self-contained Java-based program, ready to run out-of-the-box, with packages for Windows, Mac OS X and other Unix-like operating systems. As an extensible automation server, Jenkins can be used as a simple CI server or turned into the continuous delivery hub for any project.
+
+Prerequisites:
+------------
+
+EC2 RHEL 7 machine
+With Internet Access
+Security Group with Port 8080 open for internet
+Java v1.8.x
+
+Install Java:
+------------
+We will be using open java for our demo, Get latest version from http://openjdk.java.net/install/
+
+Installation of java -1.8
+
+ install java
+ yum install java-1.8.0-openjdk-devel -y	
+ java -version
+ update-alternatives --config java
+ update-alternatives --config javac
+ java -version
+
+
+set the java home:
+-----------------
+
+find /usr/lib/jvm/java-1.8* | head -n 3
+#JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.191.b12-1.el7_6.x86_64
+export JAVA_HOME
+PATH=$PATH:$JAVA_HOME
+
+set it permanently update your .bash_profile
+------------------
+1. # vi  ~/.bash_profile
+
+JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.191.b12-0.42.amzn1.x86_64
+PATH=$PATH:$JAVA_HOME:$HOME/bin
+
+export PATH
+
+2. # source ~/.bash_profile
+
+
+The output should be something like this,
+
+[root@~]# java -version
+openjdk version "1.8.0_151"
+OpenJDK Runtime Environment (build 1.8.0_151-b12)
+OpenJDK 64-Bit Server VM (build 25.151-b12, mixed mode)
+
+You are done!!
+
+=============================================================================
+=============================================================================
+
+Installation Jenkins:
+--------------------
+
+You can install jenkins using the rpm or by setting up the repo. We will setup the repo so that we can update it easily in future. Get latest version of jenkins from https://pkg.jenkins.io/redhat-stable/
+
+yum -y install wget
+wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+yum -y install jenkins
+
+Start Jenkins:
+-------------
+
+# Start jenkins service
+systemctl start jenkins
+
+# Setup Jenkins to start at boot,
+systemctl enable jenkins
+Accessing Jenkins
+
+By default jenkins runs at port 8080, You can access jenkins at
+
+http://YOUR-SERVER-PUBLIC-IP:8080
+Configure Jenkins
+
+The default Username is admin
+Grab the default password
+Password Location:/var/lib/jenkins/secrets/initialAdminPassword
+Skip Plugin Installation; We can do it later
+Change admin password
+
+Admin > Configure > Password
+Configure java path
+Manage Jenkins > Global Tool Configuration > JDK
+----
+Name		JAVA
+JAVA_HOME	/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.191.b12-0.42.amzn1.x86_64
+
+----
+
+
+=============================================================================
+=============================================================================
+
+Test Jenkins Jobs:
+-----------------
+
+Create “new item”
+Enter an item name – My-First-Project
+Chose Freestyle project
+Under Build section Execute shell : echo "Welcome to Jenkins Demo"
+Save your job
+Build job
+Check "console output"
+
+You are done!!
+=============================================================================
+=============================================================================
+
+Secure your Jenkins Server
+Configure Global Jenkins Server Security | Securing Jenkins Server . Recommended things:
+
+1) Once jenkins up immediatly change password
+   Admin > Configure > Password
+2) Remove file from server also /var/lib/jenkins/secrets/initialAdminPassword
+3) Manage Jenkins > Configure Global Security > [*]Enable security >Jenkins own user database > project-based matrix---
+   > You can add users and give permission > Disable SSD  Port > Apply > SAVE 
+
+ 
+
+=============================================================================
+=============================================================================
+
+Configure Users & Groups in Jenkins
+1) Manage Jenkins > Manage Users > creat user .
+
+Jenkins Plugin Installation
+1) Manage Jenkins > Manage plugins > search and install "Role-Based Strategy"
+
+Roles to user's
+1)  Manage Jenkins > Manage and Assign Roles > Manage Roles
+
+	Global roles
+	---
+	admin 
+	Employee (Give only read access ) 
+	
+	Project roles
+	---
+	Role -> Devlopers 
+	pattern -> Dev.* 
+	
+	Role -> Testers 
+	pattern -> Test.* 
+
+2) Assign Roles >
+
+	Global roles
+	User/group   		     Employee	admin					        
+	dave-devloper			*
+	Jenkins-Administratror		          *
+	zabi-tester			*
+	Anonymous			
+
+
+	User/group	Developers	Testers	
+	dave-devloper	*		
+	zabi-tester			   *	
+
+	Save it!!
+
+3) Create new item > projet and then login and check for each employee respective projects exists.
+
+=============================================================================
+=============================================================================
+
+ 
+ 
+ Jenkins Master-Slave Configuration
+ Setup Jenkins to run inside Tomcat Server
+
+You are done!!
+
+=============================================================================
+=============================================================================
